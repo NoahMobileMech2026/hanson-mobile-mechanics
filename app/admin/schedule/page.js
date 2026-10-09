@@ -5,7 +5,7 @@ import { getSupabase } from "../../lib/supabaseClient";
 
 export default function SchedulePage() {
   const supabase = useMemo(() => getSupabase(), []);
-  const [authorized,setAuthorized] = useState(null);
+  const [authorized,setAuthorized] = useState(null);\n  const [role,setRole] = useState(null);
   const [jobs,setJobs] = useState([]);
 
   useEffect(()=>{ init(); },[]);
@@ -26,7 +26,7 @@ export default function SchedulePage() {
 
   return (
     <main className="admin-page">
-      <header className="admin-header"><div><a className="admin-back-link" href="/admin">← Command Center</a><h1>Schedule</h1><p>Upcoming mobile service appointments.</p></div></header>
+      <header className="admin-header"><div><a className="admin-back-link" href={role==="owner"?"/admin/owner":"/admin/team"}>← Command Center</a><h1>Schedule</h1><p>Upcoming mobile service appointments.</p></div></header>
       <section className="admin-panel">
         <div className="schedule-list">
           {jobs.map(job=>(

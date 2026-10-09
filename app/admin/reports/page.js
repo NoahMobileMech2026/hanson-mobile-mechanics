@@ -55,7 +55,7 @@ export default function ReportsPage() {
 
   return (
     <main className="admin-page">
-      <header className="admin-header"><div><a className="admin-back-link" href="/admin">← Command Center</a><h1>Business Reports</h1></div></header>
+      <header className="admin-header"><div><a className="admin-back-link" href="/admin/owner">← Owner Command Center</a><h1>Business Reports</h1></div></header>
       <section className="admin-stats">
         <div className="stat-card"><span>Payments Received</span><strong>{money.format(revenue)}</strong></div>
         <div className="stat-card"><span>Business Expenses</span><strong>{money.format(expenseTotal)}</strong></div>

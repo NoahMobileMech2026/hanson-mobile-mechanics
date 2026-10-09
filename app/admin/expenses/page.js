@@ -55,7 +55,7 @@ export default function ExpensesPage() {
 
   return (
     <main className="admin-page">
-      <header className="admin-header"><div><a className="admin-back-link" href="/admin">← Command Center</a><h1>Expenses</h1><p>Total recorded: {money.format(total)}</p></div></header>
+      <header className="admin-header"><div><a className="admin-back-link" href="/admin/owner">← Owner Command Center</a><h1>Expenses</h1><p>Total recorded: {money.format(total)}</p></div></header>
       <section className="admin-panel">
         <h2>Add Expense</h2>
         <form className="admin-form-grid" onSubmit={addExpense}>

@@ -14,7 +14,7 @@ const BLANK = {
 
 export default function CallIntakePage() {
   const supabase = useMemo(() => getSupabase(), []);
-  const [authorized,setAuthorized] = useState(null);
+  const [authorized,setAuthorized] = useState(null);\n  const [role,setRole] = useState(null);
   const [form,setForm] = useState(BLANK);
   const [saving,setSaving] = useState(false);
   const [message,setMessage] = useState("");
@@ -127,7 +127,7 @@ export default function CallIntakePage() {
   return <main className="admin-page">
     <header className="admin-header">
       <div><div className="admin-kicker">Hanson Mobile Mechanics</div><h1>Phone Call Intake</h1><p>Follow this top to bottom while the customer is on the phone.</p></div>
-      <div className="admin-header-actions"><a className="btn btn-secondary" href="/admin">Back to Command Center</a></div>
+      <div className="admin-header-actions"><a className="btn btn-secondary" href={role==="owner"?"/admin/owner":"/admin/team"}>Back to Command Center</a></div>
     </header>
 
     {message && <p className="form-message">{message}</p>}
@@ -151,7 +151,7 @@ export default function CallIntakePage() {
 
     <section className="admin-panel">
       <h2>2. Vehicle</h2>
-      <p><strong>Ask:</strong> “What year, make, and model is it? Do you know the trim and engine?”</p>
+      <p><strong>Ask:</strong> “What year, make, model, trim, and engine is it?” All five vehicle fields are required before saving.</p>
       <div className="admin-form-grid"><VehicleFields value={vehicle} onChange={changeVehicle} required/></div>
     </section>
 

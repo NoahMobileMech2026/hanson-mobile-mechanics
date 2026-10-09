@@ -3,6 +3,7 @@ import "./globals.css";
 export const metadata = {
   title: "Hanson's Mobile Mechanics | Webster City, IA",
   description: "Mobile mechanic service in Webster City, Iowa and within a 35 mile radius. General repairs, brakes, suspension, steering, oil changes, tire repair, minor electrical, vehicle unlocks and more.",
+  icons: { icon: "/hanson-official-logo.svg", shortcut: "/hanson-official-logo.svg" },
 };
 
 export default function RootLayout({ children }) {

@@ -60,24 +60,17 @@ export default function HomePage() {
             </div>
           </div>
 
-          <aside className="dealer-service-panel">
-            <img className="panel-brand-logo" src="/hanson-logo.jpg" alt="Hanson's Mobile Mechanics logo" />
-            <span className="panel-label">Quick Service Request</span>
-            <h2>Need a mechanic?</h2>
-            <p>Tell us the vehicle, location, and what it is doing. We&apos;ll review it and contact you about the next step.</p>
-            <div className="service-panel-row">
-              <span>Mechanic</span>
-              <strong>Noah Hanson</strong>
+          <aside className="dealer-hero-graphic" aria-label="Hanson’s Mobile Mechanics">
+            <div className="hero-graphic-slash hero-graphic-slash-one"></div>
+            <div className="hero-graphic-slash hero-graphic-slash-two"></div>
+            <div className="hero-logo-stage">
+              <img className="hero-brand-logo" src="/hanson-logo.jpg" alt="Hanson’s Mobile Mechanics logo" />
             </div>
-            <div className="service-panel-row">
-              <span>Phone</span>
-              <a href="tel:+15152273331">515-227-3331</a>
+            <div className="hero-graphic-copy">
+              <span>WE COME TO YOU</span>
+              <strong>Repairs • Service • Diagnostics</strong>
+              <small>Webster City, Iowa • 35 Mile Radius</small>
             </div>
-            <div className="service-panel-row">
-              <span>Coverage</span>
-              <strong>Webster City + 35 miles</strong>
-            </div>
-            <a className="panel-button" href="#request">Start Request</a>
           </aside>
         </div>
       </section>
@@ -104,7 +97,7 @@ export default function HomePage() {
           <div className="dealer-service-grid">
             {services.map((service) => (
               <article className="dealer-service-card" key={service.title}>
-                <div className="service-icon-box" aria-hidden="true">+</div>
+                <div className="service-icon-box" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M14.7 6.3a4 4 0 0 0-5-5L12 3.6 9.6 6 7.3 3.7a4 4 0 0 0 5 5l-6.9 6.9a2 2 0 1 0 2.8 2.8l6.9-6.9a4 4 0 0 0 5-5L17.8 8.8 15.4 6.4l2.3-2.3a4 4 0 0 0-3-.8Z" /></svg></div>
                 <h3>{service.title}</h3>
                 <p>{service.text}</p>
               </article>

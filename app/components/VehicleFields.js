@@ -9,6 +9,12 @@ const MAKES = [
   "Toyota","Volkswagen","Volvo","Other / Not sure"
 ];
 
+const MAKE_YEAR_RANGES = {
+  Acura:[1986,2100], Infiniti:[1989,2100], Lexus:[1989,2100], Hyundai:[1986,2100],
+  Kia:[1994,2100], MINI:[2002,2100], Ram:[2010,2100], Tesla:[2008,2100],
+  Mercury:[1980,2011], Pontiac:[1980,2010], Saturn:[1991,2010]
+};
+
 const TRIMS = [
   "Base","S","SE","SEL","Sport","Limited","Touring","LX","EX","EX-L","LS","LT","LTZ",
   "XLT","Lariat","Platinum","Denali","SXT","R/T","SL","SV","SR","LE","XLE","XSE",
@@ -31,6 +37,16 @@ export default function VehicleFields({ value, onChange, required = false }) {
   );
   const [models, setModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
+
+  const availableMakes = useMemo(() => {
+    if (!value.year) return [];
+    const selectedYear = Number(value.year);
+    return MAKES.filter((make) => {
+      if (make === "Other / Not sure") return true;
+      const range = MAKE_YEAR_RANGES[make];
+      return !range || (selectedYear >= range[0] && selectedYear <= range[1]);
+    });
+  }, [value.year]);
 
   useEffect(() => {
     let active = true;
@@ -60,17 +76,23 @@ export default function VehicleFields({ value, onChange, required = false }) {
   function setField(field, nextValue) {
     const next = { ...value, [field]: nextValue };
     if (field === "year") {
+      next.make = "";
       next.model = "";
       next.trim = "";
       next.engine = "";
+      setModels([]);
     }
     if (field === "make") {
       next.model = "";
       next.trim = "";
       next.engine = "";
+      setModels([]);
     }
     if (field === "model") {
       next.trim = "";
+      next.engine = "";
+    }
+    if (field === "trim") {
       next.engine = "";
     }
     onChange(next);
@@ -92,16 +114,16 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
       <label>
         Vehicle make {required && <span aria-hidden="true">*</span>}
-        <select value={value.make || ""} onChange={(e) => setField("make", e.target.value)} required={required}>
-          <option value="">Select make</option>
-          {MAKES.map((make) => <option key={make} value={make}>{make}</option>)}
+        <select value={value.make || ""} onChange={(e) => setField("make", e.target.value)} required={required} disabled={!value.year}>
+          <option value="">{value.year ? "Select make" : "Select year first"}</option>
+          {availableMakes.map((make) => <option key={make} value={make}>{make}</option>)}
         </select>
       </label>
 
       <label>
         Vehicle model {required && <span aria-hidden="true">*</span>}
-        <select value={value.model || ""} onChange={(e) => setField("model", e.target.value)} required={required}>
-          <option value="">{loadingModels ? "Loading models..." : "Select model"}</option>
+        <select value={value.model || ""} onChange={(e) => setField("model", e.target.value)} required={required} disabled={!value.year || !value.make || loadingModels}>
+          <option value="">{!value.make ? "Select make first" : loadingModels ? "Loading matching models..." : "Select model"}</option>
           {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
           {!modelOptions.includes("Other / Not sure") && <option value="Other / Not sure">Other / Not sure</option>}
         </select>
@@ -109,8 +131,8 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
       <label>
         Trim
-        <select value={value.trim || ""} onChange={(e) => setField("trim", e.target.value)}>
-          <option value="">Select trim</option>
+        <select value={value.trim || ""} onChange={(e) => setField("trim", e.target.value)} disabled={!value.model}>
+          <option value="">{value.model ? "Select trim" : "Select model first"}</option>
           {value.trim && !TRIMS.includes(value.trim) && <option value={value.trim}>{value.trim}</option>}
           {TRIMS.map((trim) => <option key={trim} value={trim}>{trim}</option>)}
         </select>
@@ -118,8 +140,8 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
       <label>
         Engine
-        <select value={value.engine || ""} onChange={(e) => setField("engine", e.target.value)}>
-          <option value="">Select engine</option>
+        <select value={value.engine || ""} onChange={(e) => setField("engine", e.target.value)} disabled={!value.model}>
+          <option value="">{value.model ? "Select engine" : "Select model first"}</option>
           {value.engine && !ENGINES.includes(value.engine) && <option value={value.engine}>{value.engine}</option>}
           {ENGINES.map((engine) => <option key={engine} value={engine}>{engine}</option>)}
         </select>

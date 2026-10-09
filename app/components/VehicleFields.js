@@ -11,105 +11,24 @@ const MAKES = [
   "Volkswagen","Volvo","Other / Not listed"
 ];
 
-function asArray(value) {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
+async function catalog(params) {
+  const query = new URLSearchParams(params);
+  const response = await fetch("/api/vehicle-catalog?" + query.toString(), {
+    cache: "no-store"
+  });
 
-function decodeXml(value) {
-  return String(value || "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'");
-}
+  if (!response.ok) throw new Error("Vehicle lookup failed.");
 
-function parseMenuText(text) {
-  const trimmed = String(text || "").trim();
-
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    const json = JSON.parse(trimmed);
-    return asArray(json?.menuItems?.menuItem)
-      .map((item) => ({
-        label: String(item?.text ?? "").trim(),
-        value: String(item?.value ?? "").trim()
-      }))
-      .filter((item) => item.label && item.value);
-  }
-
-  const doc = new DOMParser().parseFromString(trimmed, "application/xml");
-  return [...doc.querySelectorAll("menuItem")]
-    .map((item) => ({
-      label: decodeXml(item.querySelector("text")?.textContent || "").trim(),
-      value: decodeXml(item.querySelector("value")?.textContent || "").trim()
-    }))
-    .filter((item) => item.label && item.value);
-}
-
-function parseVehicleText(text) {
-  const trimmed = String(text || "").trim();
-
-  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    const json = JSON.parse(trimmed);
-    return json?.vehicle ?? json;
-  }
-
-  const doc = new DOMParser().parseFromString(trimmed, "application/xml");
-  const read = (tag) => decodeXml(doc.querySelector(tag)?.textContent || "").trim();
+  const data = await response.json();
+  if (data?.error && !Array.isArray(data.options)) throw new Error(data.error);
 
   return {
-    displ: read("displ"),
-    cylinders: read("cylinders"),
-    fuelType1: read("fuelType1"),
-    fuelType: read("fuelType"),
-    drive: read("drive"),
-    trany: read("trany")
+    options: Array.isArray(data?.options) ? data.options : [],
+    error: data?.error || ""
   };
 }
 
-async function fuelText(path) {
-  const response = await fetch("https://www.fueleconomy.gov/ws/rest" + path, {
-    headers: { Accept: "application/json, application/xml;q=0.9, text/xml;q=0.8" }
-  });
-  if (!response.ok) throw new Error("Fuel economy vehicle catalog unavailable.");
-  return response.text();
-}
-
-async function fuelMenu(path) {
-  return parseMenuText(await fuelText(path));
-}
-
-async function nhtsaModels(year, make) {
-  const response = await fetch(
-    "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/" +
-      encodeURIComponent(make) +
-      "/modelyear/" +
-      encodeURIComponent(year) +
-      "?format=json"
-  );
-  if (!response.ok) throw new Error("NHTSA model lookup unavailable.");
-  const json = await response.json();
-  return [...new Set((json.Results || []).map((item) => item.Model_Name).filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b))
-    .map((name)=>({ label:name, value:name }));
-}
-
-function engineLabel(vehicle) {
-  const liters = String(vehicle?.displ || "").trim();
-  const cylinders = String(vehicle?.cylinders || "").trim();
-  const fuel = String(vehicle?.fuelType1 || vehicle?.fuelType || "").trim();
-  const parts = [];
-
-  if (liters && liters !== "0") parts.push(liters + "L");
-  if (cylinders) parts.push(cylinders + "-cylinder");
-  if (fuel) parts.push(fuel);
-
-  if (!parts.length && /electric/i.test(fuel)) return "Electric";
-  return parts.join(" • ") || "";
-}
-
-export default function VehicleFields({ value, onChange, required = false }) {
+export default function VehicleFields({ value, onChange }) {
   const years = useMemo(() => {
     const newest = new Date().getFullYear() + 1;
     return Array.from({ length: newest - 1983 }, (_, i) => String(newest - i));
@@ -121,216 +40,262 @@ export default function VehicleFields({ value, onChange, required = false }) {
   const [configurationId,setConfigurationId] = useState("");
   const [manualModel,setManualModel] = useState(false);
   const [manualConfiguration,setManualConfiguration] = useState(false);
+  const [manualEngine,setManualEngine] = useState(false);
   const [loadingModels,setLoadingModels] = useState(false);
   const [loadingConfigurations,setLoadingConfigurations] = useState(false);
   const [loadingEngines,setLoadingEngines] = useState(false);
   const [message,setMessage] = useState("");
 
-  useEffect(()=>{
+  useEffect(() => {
     setModels([]);
     setConfigurations([]);
     setEngines([]);
     setConfigurationId("");
     setManualModel(false);
     setManualConfiguration(false);
+    setManualEngine(false);
     setMessage("");
-  },[value.year,value.make]);
+  }, [value.year, value.make]);
 
-  useEffect(()=>{
-    let active=true;
+  useEffect(() => {
+    let active = true;
 
-    async function loadModels(){
+    async function loadModels() {
       setModels([]);
       setConfigurations([]);
       setEngines([]);
       setConfigurationId("");
+      setManualModel(false);
+      setManualConfiguration(false);
+      setManualEngine(false);
 
-      if(!value.year || !value.make || value.make==="Other / Not listed") return;
+      if (!value.year || !value.make || value.make === "Other / Not listed") {
+        if (value.make === "Other / Not listed") {
+          setManualModel(true);
+          setManualConfiguration(true);
+          setManualEngine(true);
+          setMessage("Enter the complete vehicle information manually.");
+        }
+        return;
+      }
 
       setLoadingModels(true);
       setMessage("");
 
-      try{
-        let options=[];
-        try{
-          options=await fuelMenu(
-            "/vehicle/menu/model?year="+encodeURIComponent(value.year)+
-            "&make="+encodeURIComponent(value.make)
-          );
-        }catch{
-          options=[];
-        }
+      try {
+        const result = await catalog({
+          level: "models",
+          year: value.year,
+          make: value.make
+        });
 
-        if(!options.length){
-          try{
-            options=await nhtsaModels(value.year,value.make);
-          }catch{
-            options=[];
-          }
-        }
+        if (!active) return;
 
-        if(!active) return;
-        setModels(options);
-        if(!options.length){
+        setModels(result.options);
+
+        if (!result.options.length) {
           setManualModel(true);
-          setMessage("The vehicle catalog did not return models. Enter the model manually below.");
+          setManualConfiguration(true);
+          setManualEngine(true);
+          setMessage("No model list was returned. Enter the complete vehicle information manually.");
         }
+      } catch {
+        if (!active) return;
+        setManualModel(true);
+        setManualConfiguration(true);
+        setManualEngine(true);
+        setMessage("Vehicle model lookup is unavailable. Enter the complete vehicle information manually.");
       } finally {
-        if(active) setLoadingModels(false);
+        if (active) setLoadingModels(false);
       }
     }
 
     loadModels();
-    return ()=>{active=false;};
-  },[value.year,value.make]);
+    return () => { active = false; };
+  }, [value.year, value.make]);
 
-  useEffect(()=>{
-    let active=true;
+  useEffect(() => {
+    let active = true;
 
-    async function loadConfigurations(){
+    async function loadConfigurations() {
       setConfigurations([]);
       setEngines([]);
       setConfigurationId("");
+      setManualEngine(false);
 
-      if(!value.year || !value.make || !value.model || manualModel) return;
+      if (!value.year || !value.make || !value.model || manualModel) return;
 
       setLoadingConfigurations(true);
       setMessage("");
 
-      try{
-        const options=await fuelMenu(
-          "/vehicle/menu/options?year="+encodeURIComponent(value.year)+
-          "&make="+encodeURIComponent(value.make)+
-          "&model="+encodeURIComponent(value.model)
-        );
+      try {
+        const result = await catalog({
+          level: "configurations",
+          year: value.year,
+          make: value.make,
+          model: value.model
+        });
 
-        if(!active) return;
-        setConfigurations(options);
+        if (!active) return;
 
-        if(!options.length){
+        setConfigurations(result.options);
+
+        if (!result.options.length) {
           setManualConfiguration(true);
-          setMessage("No exact configuration was returned for this vehicle. Enter the trim/configuration manually.");
+          setManualEngine(true);
+          setMessage("No exact configuration was returned. Enter trim/configuration and engine manually.");
         } else {
           setManualConfiguration(false);
-          setMessage("Select the exact configuration to narrow the engine.");
+          setMessage("Select the exact configuration to load the matching engine.");
         }
       } catch {
-        if(active){
-          setManualConfiguration(true);
-          setMessage("Exact configuration lookup is unavailable. Enter the trim/configuration manually.");
-        }
+        if (!active) return;
+        setManualConfiguration(true);
+        setManualEngine(true);
+        setMessage("Exact configuration lookup is unavailable. Enter trim/configuration and engine manually.");
       } finally {
-        if(active) setLoadingConfigurations(false);
+        if (active) setLoadingConfigurations(false);
       }
     }
 
     loadConfigurations();
-    return ()=>{active=false;};
-  },[value.year,value.make,value.model,manualModel]);
+    return () => { active = false; };
+  }, [value.year, value.make, value.model, manualModel]);
 
-  useEffect(()=>{
-    let active=true;
+  useEffect(() => {
+    let active = true;
 
-    async function loadEngine(){
+    async function loadEngine() {
       setEngines([]);
-      if(!configurationId) return;
+      if (!configurationId) return;
 
       setLoadingEngines(true);
-      try{
-        const vehicle=parseVehicleText(await fuelText("/vehicle/"+encodeURIComponent(configurationId)));
-        const label=engineLabel(vehicle);
+      setManualEngine(false);
+      setMessage("");
 
-        if(!active) return;
-        setEngines(label ? [label] : []);
-        setMessage(
-          label
-            ? "Engine matched to the selected exact configuration."
-            : "The catalog did not publish an engine description. Enter it manually."
-        );
-      } catch {
-        if(active){
-          setEngines([]);
-          setMessage("Engine lookup is unavailable. Enter the engine manually.");
+      try {
+        const result = await catalog({
+          level: "engine",
+          vehicleId: configurationId
+        });
+
+        if (!active) return;
+
+        setEngines(result.options);
+
+        if (!result.options.length) {
+          setManualEngine(true);
+          setMessage("No engine was returned for this configuration. Enter the engine manually.");
+          return;
         }
+
+        if (result.options.length === 1) {
+          onChange({ ...value, engine: result.options[0].value });
+        }
+
+        setMessage("Engine matched to the selected exact vehicle configuration.");
+      } catch {
+        if (!active) return;
+        setManualEngine(true);
+        setMessage("Engine lookup is unavailable. Enter the engine manually.");
       } finally {
-        if(active) setLoadingEngines(false);
+        if (active) setLoadingEngines(false);
       }
     }
 
     loadEngine();
-    return ()=>{active=false;};
-  },[configurationId]);
+    return () => { active = false; };
+  }, [configurationId]);
 
-  function change(field,nextValue){
-    const next={...value,[field]:nextValue};
+  function change(field,nextValue) {
+    const next = { ...value, [field]: nextValue };
 
-    if(field==="year"){
-      next.make=""; next.model=""; next.trim=""; next.engine="";
+    if (field === "year") {
+      next.make = "";
+      next.model = "";
+      next.trim = "";
+      next.engine = "";
     }
-    if(field==="make"){
-      next.model=""; next.trim=""; next.engine="";
-      setManualModel(nextValue==="Other / Not listed");
+
+    if (field === "make") {
+      next.model = "";
+      next.trim = "";
+      next.engine = "";
     }
-    if(field==="model"){
-      next.trim=""; next.engine="";
-      setManualConfiguration(false);
+
+    if (field === "model") {
+      next.trim = "";
+      next.engine = "";
       setConfigurationId("");
+      setManualConfiguration(false);
+      setManualEngine(false);
     }
-    if(field==="trim"){
-      next.engine="";
+
+    if (field === "trim") {
+      next.engine = "";
     }
 
     onChange(next);
   }
 
-  function chooseModel(event){
-    const nextValue=event.target.value;
-    if(nextValue==="__manual__"){
+  function chooseModel(event) {
+    const nextValue = event.target.value;
+
+    if (nextValue === "__manual__") {
       setManualModel(true);
       setManualConfiguration(true);
+      setManualEngine(true);
       setConfigurationId("");
-      onChange({...value,model:"",trim:"",engine:""});
+      onChange({ ...value, model:"", trim:"", engine:"" });
       return;
     }
+
     setManualModel(false);
-    change("model",nextValue);
+    change("model", nextValue);
   }
 
-  function chooseConfiguration(event){
-    const id=event.target.value;
-    if(id==="__manual__"){
+  function chooseConfiguration(event) {
+    const id = event.target.value;
+
+    if (id === "__manual__") {
       setManualConfiguration(true);
+      setManualEngine(true);
       setConfigurationId("");
-      onChange({...value,trim:"",engine:""});
+      onChange({ ...value, trim:"", engine:"" });
       return;
     }
 
-    const selected=configurations.find((item)=>item.value===id);
+    const selected = configurations.find((item) => item.value === id);
     setManualConfiguration(false);
+    setManualEngine(false);
     setConfigurationId(id);
-    onChange({...value,trim:selected?.label || "",engine:""});
+    onChange({ ...value, trim:selected?.label || "", engine:"" });
   }
 
   const selectedConfigurationValue =
     configurationId ||
-    configurations.find((item)=>item.label===value.trim)?.value ||
+    configurations.find((item) => item.label === value.trim)?.value ||
     "";
 
   return <>
     <label>
-      Vehicle year
-      <select value={value.year || ""} onChange={(e)=>change("year",e.target.value)}>
+      Vehicle year <span aria-hidden="true">*</span>
+      <select
+        required
+        value={value.year || ""}
+        onChange={(e)=>change("year",e.target.value)}
+      >
         <option value="">Select year</option>
         {years.map((year)=><option key={year} value={year}>{year}</option>)}
       </select>
     </label>
 
     <label>
-      Vehicle make {required && <span aria-hidden="true">*</span>}
+      Vehicle make <span aria-hidden="true">*</span>
       <select
+        required
         value={value.make || ""}
         onChange={(e)=>change("make",e.target.value)}
-        required={required}
         disabled={!value.year}
       >
         <option value="">{value.year ? "Select make" : "Select year first"}</option>
@@ -339,12 +304,12 @@ export default function VehicleFields({ value, onChange, required = false }) {
     </label>
 
     <label>
-      Vehicle model {required && <span aria-hidden="true">*</span>}
+      Vehicle model <span aria-hidden="true">*</span>
       {!manualModel ? (
         <select
+          required
           value={value.model || ""}
           onChange={chooseModel}
-          required={required}
           disabled={!value.make || loadingModels}
         >
           <option value="">
@@ -356,12 +321,12 @@ export default function VehicleFields({ value, onChange, required = false }) {
                   ? "Select model"
                   : "No model list returned"}
           </option>
-          {models.map((item)=><option key={item.value} value={item.label}>{item.label}</option>)}
+          {models.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
           <option value="__manual__">Other / Enter manually</option>
         </select>
       ) : (
         <input
-          required={required}
+          required
           value={value.model || ""}
           onChange={(e)=>onChange({...value,model:e.target.value,trim:"",engine:""})}
           placeholder="Enter vehicle model"
@@ -370,9 +335,10 @@ export default function VehicleFields({ value, onChange, required = false }) {
     </label>
 
     <label>
-      Trim / exact configuration
-      {!manualModel && !manualConfiguration ? (
+      Trim / exact configuration <span aria-hidden="true">*</span>
+      {!manualConfiguration ? (
         <select
+          required
           value={selectedConfigurationValue}
           onChange={chooseConfiguration}
           disabled={!value.model || loadingConfigurations}
@@ -381,39 +347,42 @@ export default function VehicleFields({ value, onChange, required = false }) {
             {!value.model
               ? "Select model first"
               : loadingConfigurations
-                ? "Loading configurations..."
+                ? "Loading exact configurations..."
                 : configurations.length
                   ? "Select exact configuration"
-                  : "No configuration list returned"}
+                  : "No exact configuration returned"}
           </option>
           {configurations.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
           <option value="__manual__">Other / Enter manually</option>
         </select>
       ) : (
         <input
+          required
           value={value.trim || ""}
           onChange={(e)=>onChange({...value,trim:e.target.value,engine:""})}
-          placeholder="Enter trim/configuration (optional)"
+          placeholder="Enter trim / exact configuration"
         />
       )}
     </label>
 
     <label>
-      Engine
-      {configurationId && engines.length ? (
+      Engine <span aria-hidden="true">*</span>
+      {!manualEngine && configurationId ? (
         <select
+          required
           value={value.engine || ""}
           onChange={(e)=>change("engine",e.target.value)}
           disabled={loadingEngines}
         >
-          <option value="">{loadingEngines ? "Loading engine..." : "Select engine"}</option>
-          {engines.map((engine)=><option key={engine} value={engine}>{engine}</option>)}
+          <option value="">{loadingEngines ? "Loading matching engine..." : "Select engine"}</option>
+          {engines.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       ) : (
         <input
+          required
           value={value.engine || ""}
           onChange={(e)=>change("engine",e.target.value)}
-          placeholder={loadingEngines ? "Loading engine..." : "Enter engine (optional)"}
+          placeholder={loadingEngines ? "Loading matching engine..." : "Enter engine"}
         />
       )}
     </label>

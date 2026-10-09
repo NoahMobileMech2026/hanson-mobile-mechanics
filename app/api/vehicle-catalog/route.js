@@ -1,5 +1,3 @@
-"use server";
-
 import { NextResponse } from "next/server";
 
 const BASE = "https://www.fueleconomy.gov/ws/rest";

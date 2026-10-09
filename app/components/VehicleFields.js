@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function addCurrent(options, current, label) {
   if (!current) return options;
@@ -9,18 +9,33 @@ function addCurrent(options, current, label) {
 }
 
 async function loadLevel(params) {
-  const query = new URLSearchParams(params);
-  const response = await fetch("/api/vehicle-catalog?" + query.toString());
-  const data = await response.json();
-  return {
-    options: Array.isArray(data.options) ? data.options : [],
-    error: data.error || "",
-    details: data.details || null
-  };
+  try {
+    const query = new URLSearchParams(params);
+    const response = await fetch("/api/vehicle-catalog?" + query.toString(), { cache: "no-store" });
+    if (!response.ok) throw new Error("Vehicle lookup request failed.");
+    const data = await response.json();
+    return {
+      options: Array.isArray(data.options) ? data.options : [],
+      error: data.error || "",
+      details: data.details || null
+    };
+  } catch {
+    return {
+      options: [],
+      error: "Vehicle data could not load. Please try the selection again.",
+      details: null
+    };
+  }
 }
 
 export default function VehicleFields({ value, onChange, required = false }) {
-  const [years,setYears] = useState([]);
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: currentYear - 1983 }, (_, i) => {
+      const year = String(currentYear - i);
+      return { label: year, value: year };
+    });
+  }, []);
   const [makes,setMakes] = useState([]);
   const [models,setModels] = useState([]);
   const [configs,setConfigs] = useState([]);
@@ -31,18 +46,6 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
   useEffect(() => {
     let active=true;
-    setLoading("year");
-    loadLevel({ level:"years" }).then((r)=>{
-      if(!active) return;
-      setYears(addCurrent(r.options,value.year,"year"));
-      setMessage(r.error);
-      setLoading("");
-    });
-    return ()=>{active=false;};
-  },[]);
-
-  useEffect(() => {
-    let active=true;
     setMakes([]); setModels([]); setConfigs([]); setEngines([]); setConfigId("");
     if(!value.year) return ()=>{active=false;};
     setLoading("make");
@@ -50,6 +53,10 @@ export default function VehicleFields({ value, onChange, required = false }) {
       if(!active) return;
       setMakes(addCurrent(r.options,value.make,"make"));
       setMessage(r.error);
+      setLoading("");
+    }).catch(()=>{
+      if(!active) return;
+      setMessage("Vehicle makes could not load. Select the year again to retry.");
       setLoading("");
     });
     return ()=>{active=false;};
@@ -64,6 +71,10 @@ export default function VehicleFields({ value, onChange, required = false }) {
       if(!active) return;
       setModels(addCurrent(r.options,value.model,"model"));
       setMessage(r.error);
+      setLoading("");
+    }).catch(()=>{
+      if(!active) return;
+      setMessage("Vehicle models could not load. Select the make again to retry.");
       setLoading("");
     });
     return ()=>{active=false;};
@@ -142,9 +153,9 @@ export default function VehicleFields({ value, onChange, required = false }) {
   return <>
     <label>
       Vehicle year
-      <select value={value.year || ""} onChange={(e)=>setField("year",e.target.value)} disabled={loading==="year"}>
-        <option value="">{loading==="year" ? "Loading years..." : "Select year"}</option>
-        {years.map((item)=><option key={item.value} value={item.label}>{item.label}</option>)}
+      <select value={value.year || ""} onChange={(e)=>setField("year",e.target.value)}>
+        <option value="">Select year</option>
+        {years.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
       </select>
     </label>
 

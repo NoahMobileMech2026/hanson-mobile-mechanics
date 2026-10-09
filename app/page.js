@@ -141,6 +141,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      <div className="mobile-action-bar" aria-label="Quick actions">
+        <a href="tel:+15152273331">Call 515-227-3331</a>
+        <a href="#request">Request Service</a>
+      </div>
+
       <footer className="footer">
         <div className="container footer-simple">
           <div>

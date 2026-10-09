@@ -82,7 +82,7 @@ export default function OwnerCommandCenter() {
     </section>
 
     <div className="admin-home-footer-links">
-      <a href="/admin/team">Preview Team Panel</a>
+      <a href="/admin/notifications">New Request Alerts</a>\n      <a href="/admin/team">Preview Team Panel</a>
       <a href="/">View Website</a>
     </div>
   </main>;

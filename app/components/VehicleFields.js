@@ -310,7 +310,7 @@ export default function VehicleFields({ value, onChange }) {
           required
           value={value.model || ""}
           onChange={chooseModel}
-          disabled={!value.make || loadingModels}
+          disabled={!value.make}
         >
           <option value="">
             {!value.make
@@ -341,7 +341,7 @@ export default function VehicleFields({ value, onChange }) {
           required
           value={selectedConfigurationValue}
           onChange={chooseConfiguration}
-          disabled={!value.model || loadingConfigurations}
+          disabled={!value.model}
         >
           <option value="">
             {!value.model
@@ -372,7 +372,7 @@ export default function VehicleFields({ value, onChange }) {
           required
           value={value.engine || ""}
           onChange={(e)=>change("engine",e.target.value)}
-          disabled={loadingEngines}
+          disabled={false}
         >
           <option value="">{loadingEngines ? "Loading matching engine..." : "Select engine"}</option>
           {engines.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}

@@ -51,8 +51,18 @@ export default function CallIntakePage() {
 
   async function save(createJob){
     setMessage("");
-    if(!form.full_name || !form.phone || !form.service_location || !form.vehicle_make || !form.vehicle_model || !form.issue_description){
-      setMessage("Complete the caller, location, vehicle, and main problem first.");
+    if(
+      !form.full_name ||
+      !form.phone ||
+      !form.service_location ||
+      !form.vehicle_year ||
+      !form.vehicle_make ||
+      !form.vehicle_model ||
+      !form.vehicle_trim ||
+      !form.vehicle_engine ||
+      !form.issue_description
+    ){
+      setMessage("Complete the caller, location, Year, Make, Model, Trim/Configuration, Engine, and main problem first.");
       return;
     }
     setSaving(true);
@@ -60,8 +70,8 @@ export default function CallIntakePage() {
       const { data:request,error } = await supabase.from("service_requests").insert({
         full_name:form.full_name, phone:form.phone, email:form.email||null,
         preferred_contact:form.preferred_contact, service_location:form.service_location,
-        vehicle_year:form.vehicle_year||null, vehicle_make:form.vehicle_make, vehicle_model:form.vehicle_model,
-        vehicle_trim:form.vehicle_trim||null, vehicle_engine:form.vehicle_engine||null,
+        vehicle_year:form.vehicle_year, vehicle_make:form.vehicle_make, vehicle_model:form.vehicle_model,
+        vehicle_trim:form.vehicle_trim, vehicle_engine:form.vehicle_engine,
         issue_description:form.issue_description, intake_source:"phone",
         vehicle_starts:form.vehicle_starts||null, vehicle_drivable:form.vehicle_drivable||null,
         warning_lights:form.warning_lights||null, fluid_leaks:form.fluid_leaks||null,
@@ -90,8 +100,8 @@ export default function CallIntakePage() {
       }
 
       const vr=await supabase.from("vehicles").insert({
-        customer_id:customer.id,year:form.vehicle_year||null,make:form.vehicle_make,model:form.vehicle_model,
-        trim:form.vehicle_trim||null,engine:form.vehicle_engine||null
+        customer_id:customer.id,year:form.vehicle_year,make:form.vehicle_make,model:form.vehicle_model,
+        trim:form.vehicle_trim,engine:form.vehicle_engine
       }).select().single();
       if(vr.error) throw vr.error;
 

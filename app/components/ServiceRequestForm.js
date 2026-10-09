@@ -33,6 +33,18 @@ export default function ServiceRequestForm() {
 
     if (form.website) return;
 
+    if (
+      !form.vehicle_year.trim() ||
+      !form.vehicle_make.trim() ||
+      !form.vehicle_model.trim() ||
+      !form.vehicle_trim.trim() ||
+      !form.vehicle_engine.trim()
+    ) {
+      setStatus("error");
+      setMessage("Please complete Year, Make, Model, Trim/Configuration, and Engine before sending the request.");
+      return;
+    }
+
     setStatus("sending");
     setMessage("");
 
@@ -51,11 +63,11 @@ export default function ServiceRequestForm() {
             full_name: form.full_name.trim(),
             phone: form.phone.trim(),
             email: form.email.trim() || null,
-            vehicle_year: form.vehicle_year.trim() || null,
+            vehicle_year: form.vehicle_year.trim(),
             vehicle_make: form.vehicle_make.trim(),
             vehicle_model: form.vehicle_model.trim(),
-            vehicle_trim: form.vehicle_trim.trim() || null,
-            vehicle_engine: form.vehicle_engine.trim() || null,
+            vehicle_trim: form.vehicle_trim.trim(),
+            vehicle_engine: form.vehicle_engine.trim(),
             issue_description: form.issue_description.trim(),
             service_location: form.service_location.trim(),
             preferred_contact: form.preferred_contact

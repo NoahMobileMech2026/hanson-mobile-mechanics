@@ -26,8 +26,8 @@ export default function CallIntakePage() {
     const { data } = await supabase.auth.getSession();
     const user = data.session?.user;
     if (!user) { window.location.href="/admin"; return; }
-    const { data: admin } = await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if(!admin || !["owner","team_member"].includes(admin.role)){ setAuthorized(false); return; }
+    const { data: admin } = await supabase.from("admin_users").select("role,active").eq("user_id",user.id).maybeSingle();
+    if(!admin || admin.active === false || !["owner","team_member"].includes(admin.role)){ setAuthorized(false); return; }
     setRole(admin.role);
     setAuthorized(true);
   }

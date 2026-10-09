@@ -23,7 +23,7 @@ export default function InvoicePage() {
     const user = sessionData.session?.user;
     if (!user) { window.location.href="/admin"; return; }
     const { data: admin } = await supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
-    if (!admin) { setAuthorized(false); return; }
+    if (!admin || admin.role !== "owner") { setAuthorized(false); return; }
     setAuthorized(true);
     await load();
   }

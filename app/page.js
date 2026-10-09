@@ -1,3 +1,5 @@
+import ServiceRequestForm from "./components/ServiceRequestForm";
+
 export default function HomePage() {
   return (
     <main>
@@ -8,7 +10,7 @@ export default function HomePage() {
             <a href="#services">Services</a>
             <a href="#how">How It Works</a>
             <a href="#about">About</a>
-            <a href="#contact">Contact</a>
+            <a href="#request">Request Service</a>
           </nav>
         </div>
       </header>
@@ -24,7 +26,7 @@ export default function HomePage() {
               taking your vehicle to a shop.
             </p>
             <div className="actions">
-              <a className="btn btn-primary" href="#contact">Request Service</a>
+              <a className="btn btn-primary" href="#request">Request Service</a>
               <a className="btn btn-secondary" href="#services">View Services</a>
             </div>
           </div>
@@ -106,12 +108,31 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section cta" id="contact">
+      <section className="section request-section" id="request">
+        <div className="container request-layout">
+          <div className="request-copy">
+            <div className="eyebrow">Request service</div>
+            <h2>Tell us what your vehicle needs.</h2>
+            <p>
+              Fill this out with the information you know. You do not need to
+              diagnose the vehicle yourself. Describe the problem in plain language.
+            </p>
+            <ul className="checklist request-checklist">
+              <li>No account required</li>
+              <li>Works on phones, tablets, and computers</li>
+              <li>Your request goes directly into our service-request system</li>
+            </ul>
+          </div>
+          <ServiceRequestForm />
+        </div>
+      </section>
+
+      <section className="section cta">
         <div className="container">
           <h2>Need help with your vehicle?</h2>
-          <p>Use the service request form coming next, or contact Hanson Mobile Mechanics directly.</p>
+          <p>Submit a service request and we will review the details and contact you about the next step.</p>
           <div className="actions" style={{ justifyContent: "center", marginTop: 24 }}>
-            <a className="btn btn-secondary" href="mailto:">Email Us</a>
+            <a className="btn btn-secondary" href="#request">Request Service</a>
           </div>
         </div>
       </section>

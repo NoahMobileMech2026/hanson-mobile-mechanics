@@ -1,0 +1,17 @@
+{
+  "name": "Hanson's Mobile Mechanics",
+  "short_name": "Hanson Mechanics",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#c9141e",
+  "description": "Hanson's Mobile Mechanics owner and team access.",
+  "icons": [
+    {
+      "src": "/hanson-official-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import VehicleFields from "./VehicleFields";
 
 const initialForm = {
   full_name: "",
@@ -9,6 +10,8 @@ const initialForm = {
   vehicle_year: "",
   vehicle_make: "",
   vehicle_model: "",
+  vehicle_trim: "",
+  vehicle_engine: "",
   issue_description: "",
   service_location: "",
   preferred_contact: "phone",
@@ -51,6 +54,8 @@ export default function ServiceRequestForm() {
             vehicle_year: form.vehicle_year.trim() || null,
             vehicle_make: form.vehicle_make.trim(),
             vehicle_model: form.vehicle_model.trim(),
+            vehicle_trim: form.vehicle_trim.trim() || null,
+            vehicle_engine: form.vehicle_engine.trim() || null,
             issue_description: form.issue_description.trim(),
             service_location: form.service_location.trim(),
             preferred_contact: form.preferred_contact
@@ -89,20 +94,24 @@ export default function ServiceRequestForm() {
           <input name="email" type="email" value={form.email} onChange={updateField} autoComplete="email" />
         </label>
 
-        <label>
-          Vehicle year
-          <input name="vehicle_year" value={form.vehicle_year} onChange={updateField} inputMode="numeric" placeholder="Example: 2018" />
-        </label>
-
-        <label>
-          Vehicle make <span aria-hidden="true">*</span>
-          <input name="vehicle_make" value={form.vehicle_make} onChange={updateField} required placeholder="Example: Ford" />
-        </label>
-
-        <label>
-          Vehicle model <span aria-hidden="true">*</span>
-          <input name="vehicle_model" value={form.vehicle_model} onChange={updateField} required placeholder="Example: Escape" />
-        </label>
+        <VehicleFields
+          value={{
+            year: form.vehicle_year,
+            make: form.vehicle_make,
+            model: form.vehicle_model,
+            trim: form.vehicle_trim,
+            engine: form.vehicle_engine
+          }}
+          onChange={(vehicle) => setForm((current) => ({
+            ...current,
+            vehicle_year: vehicle.year,
+            vehicle_make: vehicle.make,
+            vehicle_model: vehicle.model,
+            vehicle_trim: vehicle.trim,
+            vehicle_engine: vehicle.engine
+          }))}
+          required
+        />
       </div>
 
       <label>

@@ -17,7 +17,7 @@ export default function SchedulePage() {
     const { data: admin }=await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
     if(!admin){ setAuthorized(false); return; }
     setAuthorized(true);
-    const { data }=await supabase.from("jobs").select("id,status,scheduled_for,service_location,customers(full_name,phone),vehicles(year,make,model)").not("scheduled_for","is",null).order("scheduled_for");
+    const { data }=await supabase.from("jobs").select("id,status,scheduled_for,service_location,customers(full_name,phone),vehicles(year,make,model,trim,engine)").is("archived_at", null).not("scheduled_for","is",null).order("scheduled_for");
     setJobs(data??[]);
   }
 
@@ -32,7 +32,7 @@ export default function SchedulePage() {
           {jobs.map(job=>(
             <a className="schedule-card" href={`/admin/jobs/${job.id}`} key={job.id}>
               <div className="schedule-date"><strong>{new Date(job.scheduled_for).toLocaleDateString()}</strong><span>{new Date(job.scheduled_for).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></div>
-              <div><span className="status-pill">{job.status.replaceAll("_"," ")}</span><h3>{job.customers?.full_name}</h3><p>{[job.vehicles?.year,job.vehicles?.make,job.vehicles?.model].filter(Boolean).join(" ")}</p><small>{job.service_location}</small></div>
+              <div><span className="status-pill">{job.status.replaceAll("_"," ")}</span><h3>{job.customers?.full_name}</h3><p>{[job.vehicles?.year,job.vehicles?.make,job.vehicles?.model,job.vehicles?.trim].filter(Boolean).join(" ")}{job.vehicles?.engine ? ` • ${job.vehicles.engine}` : ""}</p><small>{job.service_location}</small></div>
             </a>
           ))}
           {!jobs.length && <p>No scheduled jobs yet.</p>}

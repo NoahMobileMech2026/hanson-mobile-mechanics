@@ -13,6 +13,7 @@ export default function InvoicePage() {
   const [items, setItems] = useState([]);
   const [payments, setPayments] = useState([]);
   const [authorized, setAuthorized] = useState(null);
+  const [invoiceFlyMessage, setInvoiceFlyMessage] = useState("");
   const [payment, setPayment] = useState({ amount:"", payment_method:"cash", reference:"", notes:"" });
 
   useEffect(() => { init(); }, [id]);
@@ -36,6 +37,39 @@ export default function InvoicePage() {
     setInvoice(invoiceRes.data);
     setItems(itemRes.data ?? []);
     setPayments(paymentRes.data ?? []);
+  }
+
+  async function openInvoiceFly() {
+    const target = window.open("https://app.invoicefly.com", "_blank", "noopener,noreferrer");
+    const customer = invoice.jobs?.customers;
+    const vehicle = invoice.jobs?.vehicles;
+    const vehicleLine = [vehicle?.year, vehicle?.make, vehicle?.model, vehicle?.trim, vehicle?.engine].filter(Boolean).join(" ");
+    const lines = [
+      `HANSON'S MOBILE MECHANICS - INVOICE #${invoice.invoice_number}`,
+      `Customer: ${customer?.full_name || ""}`,
+      `Phone: ${customer?.phone || ""}`,
+      `Email: ${customer?.email || ""}`,
+      `Vehicle: ${vehicleLine}`,
+      `Due date: ${invoice.due_date || ""}`,
+      "",
+      "ITEMS:",
+      ...items.map((item) => `${item.description} | Qty ${item.quantity} | ${money.format(Number(item.unit_price))} each | ${money.format(Number(item.line_total))}`),
+      "",
+      `Subtotal: ${money.format(Number(invoice.subtotal || 0))}`,
+      `Tax: ${money.format(Number(invoice.tax_amount || 0))}`,
+      `Total: ${money.format(Number(invoice.total || 0))}`,
+      `Paid: ${money.format(Number(invoice.amount_paid || 0))}`,
+      `Balance: ${money.format(Number(invoice.balance_due || 0))}`,
+      invoice.customer_notes ? `Notes: ${invoice.customer_notes}` : ""
+    ].filter(Boolean).join("\n");
+
+    try {
+      await navigator.clipboard.writeText(lines);
+      setInvoiceFlyMessage("Invoice details copied. Paste them into the InvoiceFly invoice you just opened.");
+    } catch {
+      setInvoiceFlyMessage("InvoiceFly opened. Copy the invoice details from this page if your browser blocked clipboard access.");
+    }
+    if (!target) setInvoiceFlyMessage("Your browser blocked the InvoiceFly window. Allow pop-ups and try again.");
   }
 
   async function recordPayment(event) {
@@ -69,9 +103,13 @@ export default function InvoicePage() {
     <main className="admin-page invoice-admin-page">
       <header className="admin-header no-print">
         <div><a className="admin-back-link" href={`/admin/jobs/${invoice.job_id}`}>← Back to Job</a><h1>Invoice #{invoice.invoice_number}</h1></div>
-        <div className="admin-header-actions"><button className="btn btn-secondary" onClick={() => window.print()}>Print / Save PDF</button></div>
+        <div className="admin-header-actions">
+          <button className="btn btn-secondary" onClick={openInvoiceFly}>Copy + Open InvoiceFly</button>
+          <button className="btn btn-secondary" onClick={() => window.print()}>Print / Save PDF</button>
+        </div>
       </header>
 
+      {invoiceFlyMessage && <div className="invoicefly-message no-print">{invoiceFlyMessage}</div>}
       <section className="invoice-sheet">
         <div className="invoice-brand-row">
           <div><h1>Hanson Mobile Mechanics</h1><p>Mobile mechanic service made simple.</p></div>
@@ -80,7 +118,7 @@ export default function InvoicePage() {
 
         <div className="invoice-meta-grid">
           <div><span className="invoice-label">Bill To</span><strong>{customer?.full_name}</strong><span>{customer?.phone}</span>{customer?.email && <span>{customer.email}</span>}</div>
-          <div><span className="invoice-label">Vehicle</span><strong>{[vehicle?.year, vehicle?.make, vehicle?.model].filter(Boolean).join(" ")}</strong>{vehicle?.vin && <span>VIN: {vehicle.vin}</span>}</div>
+          <div><span className="invoice-label">Vehicle</span><strong>{[vehicle?.year, vehicle?.make, vehicle?.model, vehicle?.trim].filter(Boolean).join(" ")}{vehicle?.engine && <span>{vehicle.engine}</span>}</strong>{vehicle?.vin && <span>VIN: {vehicle.vin}</span>}</div>
           <div><span className="invoice-label">Status</span><strong>{invoice.status.toUpperCase()}</strong><span>Due: {invoice.due_date || "Not set"}</span></div>
         </div>
 

@@ -88,7 +88,7 @@ export default function EstimatePage() {
 
         <div className="invoice-meta-grid">
           <div><span className="invoice-label">Customer</span><strong>{customer?.full_name}</strong><span>{customer?.phone}</span>{customer?.email && <span>{customer.email}</span>}</div>
-          <div><span className="invoice-label">Vehicle</span><strong>{[vehicle?.year, vehicle?.make, vehicle?.model].filter(Boolean).join(" ")}</strong>{vehicle?.vin && <span>VIN: {vehicle.vin}</span>}</div>
+          <div><span className="invoice-label">Vehicle</span><strong>{[vehicle?.year, vehicle?.make, vehicle?.model, vehicle?.trim].filter(Boolean).join(" ")}{vehicle?.engine && <span>{vehicle.engine}</span>}</strong>{vehicle?.vin && <span>VIN: {vehicle.vin}</span>}</div>
           <div><span className="invoice-label">Status</span><strong>{estimate.status.toUpperCase()}</strong><span>Valid until: {estimate.valid_until || "Not set"}</span></div>
         </div>
 

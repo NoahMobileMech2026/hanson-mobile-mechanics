@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { getSupabase } from "../../../lib/supabaseClient";
+import VehicleFields from "../../../components/VehicleFields";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -17,6 +18,7 @@ export default function JobDetailPage() {
   const [chargeForm, setChargeForm] = useState({ charge_type:"labor", description:"", quantity:"1", unit_cost:"0", unit_price:"0", part_number:"", supplier:"" });
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [vehicleDraft, setVehicleDraft] = useState({ year:"", make:"", model:"", trim:"", engine:"" });
 
   useEffect(() => { init(); }, [id]);
 
@@ -39,6 +41,15 @@ export default function JobDetailPage() {
       supabase.from("job_notes").select("*").eq("job_id", id).order("created_at", { ascending:false })
     ]);
     setJob(jobRes.data);
+    if (jobRes.data?.vehicles) {
+      setVehicleDraft({
+        year: jobRes.data.vehicles.year ? String(jobRes.data.vehicles.year) : "",
+        make: jobRes.data.vehicles.make || "",
+        model: jobRes.data.vehicles.model || "",
+        trim: jobRes.data.vehicles.trim || "",
+        engine: jobRes.data.vehicles.engine || ""
+      });
+    }
     setCharges(chargeRes.data ?? []);
     setInvoices(invoiceRes.data ?? []);
     setNotes(noteRes.data ?? []);
@@ -47,6 +58,39 @@ export default function JobDetailPage() {
   async function updateJob(field, value) {
     await supabase.from("jobs").update({ [field]: value }).eq("id", id);
     await load();
+  }
+
+  async function saveVehicle(event) {
+    event.preventDefault();
+    if (!job.vehicle_id) return;
+    setSaving(true);
+    const { error } = await supabase.from("vehicles").update({
+      year: vehicleDraft.year || null,
+      make: vehicleDraft.make || null,
+      model: vehicleDraft.model || null,
+      trim: vehicleDraft.trim || null,
+      engine: vehicleDraft.engine || null
+    }).eq("id", job.vehicle_id);
+    if (error) alert(error.message);
+    await load();
+    setSaving(false);
+  }
+
+  async function toggleArchive() {
+    setSaving(true);
+    const next = job.archived_at ? null : new Date().toISOString();
+    const { error } = await supabase.from("jobs").update({ archived_at: next }).eq("id", id);
+    if (error) {
+      alert(error.message);
+      setSaving(false);
+      return;
+    }
+    if (next) {
+      window.location.href = "/admin#archive";
+      return;
+    }
+    await load();
+    setSaving(false);
   }
 
   async function addCharge(event) {
@@ -152,9 +196,10 @@ export default function JobDetailPage() {
         <div>
           <a className="admin-back-link" href="/admin">← Command Center</a>
           <h1>Job: {job.customers?.full_name}</h1>
-          <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model].filter(Boolean).join(" ")}</p>
+          <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model, job.vehicles?.trim].filter(Boolean).join(" ")}{job.vehicles?.engine ? ` • ${job.vehicles.engine}` : ""}</p>
         </div>
         <div className="admin-header-actions">
+          <button className="btn btn-secondary" onClick={toggleArchive} disabled={saving}>{job.archived_at ? "Restore Job" : "Archive Job"}</button>
           <button className="btn btn-secondary" onClick={createEstimate} disabled={saving}>Create Estimate</button>
           <button className="btn btn-primary" onClick={createInvoice} disabled={saving}>Create Invoice</button>
         </div>
@@ -195,6 +240,16 @@ export default function JobDetailPage() {
         <label className="admin-full-label">Work Performed
           <textarea rows="3" value={job.work_performed ?? ""} onChange={(e) => updateJob("work_performed", e.target.value)} />
         </label>
+      </section>
+
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <div><h2>Vehicle Details</h2><p>Use the dropdowns to keep vehicle information consistent.</p></div>
+        </div>
+        <form className="admin-form-grid vehicle-admin-grid" onSubmit={saveVehicle}>
+          <VehicleFields value={vehicleDraft} onChange={setVehicleDraft} required />
+          <div className="admin-form-action"><button className="btn btn-primary" type="submit" disabled={saving}>Save Vehicle</button></div>
+        </form>
       </section>
 
       <section className="admin-panel">

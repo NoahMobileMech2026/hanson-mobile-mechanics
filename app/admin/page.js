@@ -69,7 +69,7 @@ export default function AdminPage() {
       customerRes
     ] = await Promise.all([
       supabase.from("service_requests").select("*").order("created_at", { ascending: false }).limit(50),
-      supabase.from("jobs").select("id,status,scheduled_for,service_location,created_at,customers(full_name),vehicles(year,make,model)").order("created_at", { ascending: false }).limit(50),
+      supabase.from("jobs").select("id,status,scheduled_for,service_location,created_at,archived_at,customers(full_name),vehicles(year,make,model,trim,engine)").order("created_at", { ascending: false }).limit(50),
       supabase.from("invoices").select("id,invoice_number,status,total,amount_paid,balance_due,due_date,created_at,jobs(customers(full_name))").order("created_at", { ascending: false }).limit(50),
       supabase.from("payments").select("id,amount,paid_at").order("paid_at", { ascending: false }).limit(500),
       supabase.from("expenses").select("id,amount,expense_date,category,description,vendor").order("expense_date", { ascending: false }).limit(500),
@@ -129,7 +129,9 @@ export default function AdminPage() {
         customer_id: customer.id,
         year: request.vehicle_year || null,
         make: request.vehicle_make,
-        model: request.vehicle_model
+        model: request.vehicle_model,
+        trim: request.vehicle_trim || null,
+        engine: request.vehicle_engine || null
       })
       .select()
       .single();
@@ -163,10 +165,21 @@ export default function AdminPage() {
     window.location.href = `/admin/jobs/${job.id}`;
   }
 
+  async function restoreJob(id) {
+    setBusyId(id);
+    const { error } = await supabase.from("jobs").update({ archived_at: null }).eq("id", id);
+    if (error) alert(error.message);
+    await loadDashboard();
+    setBusyId(null);
+  }
+
+  const visibleJobs = jobs.filter((item) => !item.archived_at);
+  const archivedJobs = jobs.filter((item) => item.archived_at);
+
   const revenue = payments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const expenseTotal = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstanding = invoices.reduce((sum, item) => sum + Number(item.balance_due || 0), 0);
-  const activeJobs = jobs.filter((job) => !["completed", "cancelled"].includes(job.status)).length;
+  const activeJobs = visibleJobs.filter((job) => !["completed", "cancelled"].includes(job.status)).length;
   const newRequests = requests.filter((request) => request.status === "new").length;
 
   if (!session) {
@@ -226,6 +239,7 @@ export default function AdminPage() {
       <nav className="admin-section-nav">
         <a href="#requests">Requests</a>
         <a href="#jobs">Jobs</a>
+        <a href="#archive">Archive</a>
         <a href="#invoices">Invoices</a>
         <a href="#customers">Customers</a>
         <a href="#expenses">Expenses</a>
@@ -244,7 +258,7 @@ export default function AdminPage() {
               {requests.map((request) => (
                 <tr key={request.id}>
                   <td><strong>{request.full_name}</strong><br /><small>{request.phone}</small></td>
-                  <td>{[request.vehicle_year, request.vehicle_make, request.vehicle_model].filter(Boolean).join(" ")}</td>
+                  <td>{[request.vehicle_year, request.vehicle_make, request.vehicle_model, request.vehicle_trim].filter(Boolean).join(" ")}{request.vehicle_engine ? <><br /><small>{request.vehicle_engine}</small></> : null}</td>
                   <td className="admin-wide-cell">{request.issue_description}</td>
                   <td>
                     <select value={request.status} disabled={busyId === request.id} onChange={(e) => updateRequestStatus(request.id, e.target.value)}>
@@ -269,17 +283,42 @@ export default function AdminPage() {
       <section className="admin-panel" id="jobs">
         <div className="admin-panel-heading"><div><h2>Jobs</h2><p>Track every repair from intake through completion.</p></div></div>
         <div className="admin-card-grid">
-          {jobs.map((job) => (
+          {visibleJobs.map((job) => (
             <a className="admin-record-card" href={`/admin/jobs/${job.id}`} key={job.id}>
               <span className="status-pill">{job.status.replaceAll("_", " ")}</span>
               <h3>{job.customers?.full_name || "Customer"}</h3>
-              <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model].filter(Boolean).join(" ")}</p>
+              <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model, job.vehicles?.trim].filter(Boolean).join(" ")}{job.vehicles?.engine ? ` • ${job.vehicles.engine}` : ""}</p>
               <small>{job.service_location || "No service location entered"}</small>
             </a>
           ))}
-          {!jobs.length && <p>No jobs yet. Convert a service request to create the first job.</p>}
+          {!visibleJobs.length && <p>No active jobs. Archived jobs stay in the section below.</p>}
         </div>
       </section>
+
+      <details className="admin-panel archive-panel" id="archive">
+        <summary>
+          <span><strong>Archived Jobs</strong><small>{archivedJobs.length} archived</small></span>
+          <span className="archive-summary-action">Show / Hide</span>
+        </summary>
+        <p className="archive-help">Completed or older jobs can live here without cluttering the active job list.</p>
+        <div className="admin-card-grid">
+          {archivedJobs.map((job) => (
+            <div className="admin-record-card archived-record-card" key={job.id}>
+              <span className="status-pill">{job.status.replaceAll("_", " ")}</span>
+              <h3>{job.customers?.full_name || "Customer"}</h3>
+              <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model, job.vehicles?.trim].filter(Boolean).join(" ")}{job.vehicles?.engine ? ` • ${job.vehicles.engine}` : ""}</p>
+              <small>{job.archived_at ? `Archived ${new Date(job.archived_at).toLocaleDateString()}` : ""}</small>
+              <div className="archive-card-actions">
+                <a className="admin-small-button" href={`/admin/jobs/${job.id}`}>Open Job</a>
+                <button className="admin-small-button secondary-admin-button" disabled={busyId === job.id} onClick={() => restoreJob(job.id)}>
+                  {busyId === job.id ? "Restoring..." : "Restore"}
+                </button>
+              </div>
+            </div>
+          ))}
+          {!archivedJobs.length && <p>No archived jobs yet.</p>}
+        </div>
+      </details>
 
       <section className="admin-panel" id="invoices">
         <div className="admin-panel-heading"><div><h2>Invoices</h2><p>Balances and payment status update from your manual payment entries.</p></div></div>

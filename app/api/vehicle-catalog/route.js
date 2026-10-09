@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 const BASE = "https://open.wenmarpro.com/v1/vehicles";
+const AUTOTOOLS = "https://autotools.brightcoding.dev/api/vehicles/options";
 
 async function getCatalog(path) {
   const response = await fetch(BASE + path, {
@@ -16,6 +17,46 @@ async function getCatalog(path) {
   }
 
   return data;
+}
+
+async function getExactEngineOptions({ year, make, model, trim }) {
+  const query = new URLSearchParams({
+    step: "engines",
+    year,
+    make,
+    model,
+    trim
+  });
+
+  const response = await fetch(AUTOTOOLS + "?" + query.toString(), {
+    headers: { Accept: "application/json" },
+    cache: "no-store"
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json().catch(() => null);
+  const rows = Array.isArray(data?.data) ? data.data : [];
+
+  const seen = new Set();
+  return rows
+    .map((row) => {
+      const code = String(row?.label || row?.value || "").trim();
+      const hint = String(row?.hint || "").trim();
+      if (!code) return null;
+
+      const display = hint ? code + " — " + hint : code;
+      const key = display.toLowerCase();
+      if (seen.has(key)) return null;
+      seen.add(key);
+
+      return {
+        label: display,
+        value: display,
+        id: String(row?.value || code)
+      };
+    })
+    .filter(Boolean);
 }
 
 function option(label, value, meta = {}) {
@@ -75,17 +116,40 @@ export async function GET(request) {
     }
 
     if (level === "engines" && year && make && model && trim) {
+      const exact = await getExactEngineOptions({ year, make, model, trim }).catch(() => []);
+
+      if (exact.length) {
+        return NextResponse.json({ options: exact, source: "engine-code" });
+      }
+
       const rows = await getCatalog(
         "/engines?year=" + encodeURIComponent(year) +
         "&make=" + encodeURIComponent(make) +
         "&model=" + encodeURIComponent(model) +
         "&submodel=" + encodeURIComponent(trim)
       );
-      return NextResponse.json({
-        options: (Array.isArray(rows) ? rows : []).map((row) =>
-          option(row.label, row.label, { id: row.id, preset: !!row.preset, vin8: row.vin8 ?? null })
-        )
-      });
+
+      const seen = new Set();
+      const options = (Array.isArray(rows) ? rows : [])
+        .map((row) => {
+          const base = String(row?.label || "").trim();
+          if (!base) return null;
+
+          const vinHint = row?.vin8 ? " • VIN 8: " + row.vin8 : "";
+          const display = base + vinHint;
+          const key = (String(row?.id || "") + "|" + display).toLowerCase();
+          if (seen.has(key)) return null;
+          seen.add(key);
+
+          return option(display, display, {
+            id: row.id,
+            preset: !!row.preset,
+            vin8: row.vin8 ?? null
+          });
+        })
+        .filter(Boolean);
+
+      return NextResponse.json({ options, source: "wenmar" });
     }
 
     return NextResponse.json(

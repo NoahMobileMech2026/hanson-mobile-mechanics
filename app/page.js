@@ -130,7 +130,7 @@ export default function HomePage() {
       <section className="section cta">
         <div className="container">
           <h2>Need help with your vehicle?</h2>
-          <p>Submit a service request and we will review the details and contact you about the next step.</p>
+          <p>Submit a service request and we will review the details and contact you about the next step. Sending a request does not automatically confirm an appointment.</p>
           <div className="actions" style={{ justifyContent: "center", marginTop: 24 }}>
             <a className="btn btn-secondary" href="#request">Request Service</a>
           </div>
@@ -140,7 +140,7 @@ export default function HomePage() {
       <footer className="footer">
         <div className="container">
           <strong>Hanson Mobile Mechanics</strong>
-          <div>Mobile mechanic service made simple.</div>
+          <div>Mobile mechanic service made simple.</div>\n          <div className="footer-links"><a href="/privacy">Privacy</a></div>
         </div>
       </footer>
     </main>

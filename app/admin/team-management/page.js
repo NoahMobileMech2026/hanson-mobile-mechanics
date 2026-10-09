@@ -19,8 +19,8 @@ export default function TeamManagementPage() {
     const user=sessionData.session?.user;
     if(!user){ window.location.href="/admin"; return; }
 
-    const { data:admin }=await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if(!admin || admin.role!=="owner"){ setAuthorized(false); setLoading(false); return; }
+    const { data:admin }=await supabase.from("admin_users").select("role,active").eq("user_id",user.id).maybeSingle();
+    if(!admin || admin.active === false || admin.role!=="owner"){ setAuthorized(false); setLoading(false); return; }
 
     setAuthorized(true);
     await loadMembers();

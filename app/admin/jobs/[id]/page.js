@@ -85,6 +85,33 @@ export default function JobDetailPage() {
     await load();
   }
 
+  async function createEstimate() {
+    if (!charges.length) {
+      alert("Add at least one labor, part, fee, or discount line first.");
+      return;
+    }
+    setSaving(true);
+    const { data: estimate, error } = await supabase.from("estimates").insert({
+      job_id:id,
+      status:"draft",
+      valid_until:new Date(Date.now() + 14 * 86400000).toISOString().slice(0,10)
+    }).select().single();
+    if (error) { alert(error.message); setSaving(false); return; }
+
+    const items = charges.map((charge, index) => ({
+      estimate_id:estimate.id,
+      item_type:charge.charge_type,
+      description:charge.description,
+      quantity:Number(charge.quantity),
+      unit_price:Number(charge.unit_price),
+      line_total:Number(charge.quantity) * Number(charge.unit_price),
+      sort_order:index
+    }));
+    const result = await supabase.from("estimate_items").insert(items);
+    if (result.error) { alert(result.error.message); setSaving(false); return; }
+    window.location.href = `/admin/estimates/${estimate.id}`;
+  }
+
   async function createInvoice() {
     if (!charges.length) {
       alert("Add at least one labor, part, fee, or discount line first.");
@@ -127,7 +154,10 @@ export default function JobDetailPage() {
           <h1>Job: {job.customers?.full_name}</h1>
           <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model].filter(Boolean).join(" ")}</p>
         </div>
-        <button className="btn btn-primary" onClick={createInvoice} disabled={saving}>Create Invoice</button>
+        <div className="admin-header-actions">
+          <button className="btn btn-secondary" onClick={createEstimate} disabled={saving}>Create Estimate</button>
+          <button className="btn btn-primary" onClick={createInvoice} disabled={saving}>Create Invoice</button>
+        </div>
       </header>
 
       <section className="admin-stats">

@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Hanson Mobile Mechanics",
-  description: "Simple, convenient mobile mechanic service brought to you.",
+  title: "Hanson's Mobile Mechanics | Webster City, IA",
+  description: "Mobile mechanic service in Webster City, Iowa and within a 35 mile radius. General repairs, brakes, suspension, steering, oil changes, tire repair, minor electrical, vehicle unlocks and more.",
 };
 
 export default function RootLayout({ children }) {

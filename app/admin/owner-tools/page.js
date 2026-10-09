@@ -13,8 +13,8 @@ export default function OwnerToolsPage(){
     const { data:sessionData }=await supabase.auth.getSession();
     const user=sessionData.session?.user;
     if(!user){window.location.href="/admin";return;}
-    const { data:admin }=await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    setAuthorized(!!admin && admin.role==="owner");
+    const { data:admin }=await supabase.from("admin_users").select("role,active").eq("user_id",user.id).maybeSingle();
+    setAuthorized(!!admin && admin.active !== false && admin.role==="owner");
   }
 
   if(authorized===null) return <main className="admin-loading">Loading Owner Tools...</main>;

@@ -15,51 +15,58 @@ const MAKE_YEAR_RANGES = {
   Mercury:[1980,2011], Pontiac:[1980,2010], Saturn:[1991,2010]
 };
 
-const DEFAULT_TRIMS = ["Base","S","SE","SEL","Sport","Limited","Touring","Premium","Luxury","Platinum","Other / Not sure"];
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
 
-const TRIMS_BY_MAKE = {
-  Acura:["Base","Technology","A-Spec","Advance","Type S","Other / Not sure"],
-  Audi:["Premium","Premium Plus","Prestige","S line","Other / Not sure"],
-  BMW:["Base","xDrive","M Sport","M","Other / Not sure"],
-  Buick:["Preferred","Essence","Premium","Avenir","Sport Touring","Other / Not sure"],
-  Cadillac:["Luxury","Premium Luxury","Sport","Platinum","V-Series","Other / Not sure"],
-  Chevrolet:["LS","LT","LTZ","Premier","RST","High Country","Z71","Other / Not sure"],
-  Chrysler:["LX","Touring","Touring L","Limited","S","Other / Not sure"],
-  Dodge:["SE","SXT","GT","R/T","Citadel","Limited","Other / Not sure"],
-  Ford:["S","SE","SEL","ST","XLT","Lariat","Limited","Platinum","King Ranch","Other / Not sure"],
-  GMC:["SLE","SLT","AT4","Denali","Elevation","Other / Not sure"],
-  Honda:["LX","Sport","EX","EX-L","Touring","Elite","Other / Not sure"],
-  Hyundai:["SE","SEL","N Line","Limited","Calligraphy","Other / Not sure"],
-  Infiniti:["Pure","Luxe","Sensory","Red Sport","Other / Not sure"],
-  Jeep:["Sport","Latitude","Limited","Trailhawk","Overland","Rubicon","Sahara","Other / Not sure"],
-  Kia:["LX","LXS","EX","SX","SX Prestige","GT-Line","GT","Other / Not sure"],
-  Lexus:["Base","Premium","Luxury","F Sport","Other / Not sure"],
-  Lincoln:["Standard","Reserve","Black Label","Other / Not sure"],
-  Mazda:["Sport","Touring","Grand Touring","Select","Preferred","Premium","Carbon Edition","Other / Not sure"],
-  "Mercedes-Benz":["Base","4MATIC","AMG Line","AMG","Other / Not sure"],
-  Mitsubishi:["ES","LE","SE","SEL","GT","Other / Not sure"],
-  Nissan:["S","SV","SR","SL","Platinum","PRO-4X","Other / Not sure"],
-  Ram:["Tradesman","Big Horn","Laramie","Rebel","Limited","Longhorn","Other / Not sure"],
-  Subaru:["Base","Premium","Sport","Limited","Touring","Wilderness","Other / Not sure"],
-  Tesla:["Standard Range","Long Range","Performance","Plaid","Other / Not sure"],
-  Toyota:["L","LE","SE","XLE","XSE","SR","SR5","Limited","Platinum","TRD","Other / Not sure"],
-  Volkswagen:["S","SE","SEL","R-Line","GLI","GTI","Other / Not sure"],
-  Volvo:["Core","Plus","Ultimate","Momentum","Inscription","R-Design","Other / Not sure"]
-};
+function normalize(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
-const DEFAULT_ENGINES = [
-  "1.4L 4-cylinder","1.5L 4-cylinder","1.6L 4-cylinder","1.8L 4-cylinder",
-  "2.0L 4-cylinder","2.4L 4-cylinder","2.5L 4-cylinder","2.7L V6","3.0L V6",
-  "3.5L V6","3.6L V6","3.8L V6","4.0L 6-cylinder","4.6L V8","5.0L V8",
-  "5.3L V8","5.7L V8","6.0L V8","6.2L V8","Diesel","Hybrid","Electric",
-  "Other / Not sure"
-];
-function getEngineOptions(make, model) {
-  const name = (model || "").toLowerCase();
-  if (make === "Tesla") return ["Electric","Other / Not sure"];
-  if (/(prius|ioniq|niro|insight)/i.test(name)) return ["1.5L 4-cylinder","1.6L 4-cylinder","1.8L 4-cylinder","2.0L 4-cylinder","Hybrid","Other / Not sure"];
-  if (/(f-250|f-350|silverado 2500|silverado 3500|sierra 2500|sierra 3500|ram 2500|ram 3500)/i.test(name)) return ["5.0L V8","5.3L V8","5.7L V8","6.0L V8","6.2L V8","Diesel","Other / Not sure"];
-  return DEFAULT_ENGINES;
+function engineLabel(optionText, make) {
+  const text = String(optionText || "");
+  const literMatch = text.match(/(\d+(?:\.\d+)?)\s*L\b/i);
+  const cylinderMatch = text.match(/(\d+)\s*(?:cyl|cylinder)/i);
+  const liter = literMatch ? literMatch[1] : "";
+  const cylinders = cylinderMatch ? cylinderMatch[1] : "";
+
+  if (liter && cylinders) return liter + "L " + cylinders + "-cylinder";
+  if (liter) return liter + "L";
+  if (cylinders) return cylinders + "-cylinder";
+  if (/electric|\bev\b/i.test(text) || /tesla/i.test(make)) return "Electric";
+  if (/diesel/i.test(text)) return "Diesel";
+  if (/hybrid/i.test(text)) return "Hybrid";
+  return "";
+}
+
+async function fuelMenu(path) {
+  const response = await fetch("https://www.fueleconomy.gov/ws/rest" + path, {
+    headers: { Accept: "application/json" }
+  });
+
+  if (!response.ok) throw new Error("Vehicle configuration lookup failed.");
+
+  const json = await response.json();
+  return asArray(json && json.menuItems ? json.menuItems.menuItem : null)
+    .map((item) => ({
+      label: String(item && item.text ? item.text : "").trim(),
+      value: String(item && item.value ? item.value : "").trim()
+    }))
+    .filter((item) => item.label);
+}
+
+function matchingVariants(models, selectedModel) {
+  const selected = normalize(selectedModel);
+  if (!selected) return [];
+
+  const exact = models.filter((item) => normalize(item.label) === selected);
+  if (exact.length) return exact;
+
+  return models.filter((item) => {
+    const candidate = normalize(item.label);
+    return candidate.startsWith(selected) || selected.startsWith(candidate);
+  });
 }
 
 export default function VehicleFields({ value, onChange, required = false }) {
@@ -68,12 +75,19 @@ export default function VehicleFields({ value, onChange, required = false }) {
     () => Array.from({ length: currentYear - 1979 }, (_, i) => String(currentYear - i)),
     [currentYear]
   );
+
   const [models, setModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [trims, setTrims] = useState([]);
+  const [engines, setEngines] = useState([]);
+  const [loadingTrims, setLoadingTrims] = useState(false);
+  const [loadingEngines, setLoadingEngines] = useState(false);
+  const [vehicleMessage, setVehicleMessage] = useState("");
 
   const availableMakes = useMemo(() => {
     if (!value.year) return [];
     const selectedYear = Number(value.year);
+
     return MAKES.filter((make) => {
       if (make === "Other / Not sure") return true;
       const range = MAKE_YEAR_RANGES[make];
@@ -83,18 +97,27 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
   useEffect(() => {
     let active = true;
+
     async function loadModels() {
       if (!value.year || !value.make || value.make === "Other / Not sure") {
         setModels([]);
         return;
       }
+
       setLoadingModels(true);
       try {
         const response = await fetch(
-          `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/${encodeURIComponent(value.make)}/modelyear/${value.year}?format=json`
+          "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/" +
+          encodeURIComponent(value.make) +
+          "/modelyear/" +
+          encodeURIComponent(value.year) +
+          "?format=json"
         );
         const json = await response.json();
-        const next = [...new Set((json.Results || []).map((item) => item.Model_Name).filter(Boolean))].sort();
+        const next = [...new Set(
+          (json.Results || []).map((item) => item.Model_Name).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b));
+
         if (active) setModels(next);
       } catch {
         if (active) setModels([]);
@@ -102,43 +125,161 @@ export default function VehicleFields({ value, onChange, required = false }) {
         if (active) setLoadingModels(false);
       }
     }
+
     loadModels();
     return () => { active = false; };
   }, [value.year, value.make]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadTrims() {
+      setTrims([]);
+      setEngines([]);
+      setVehicleMessage("");
+
+      if (!value.year || !value.make || !value.model ||
+          value.make === "Other / Not sure" || value.model === "Other / Not sure") {
+        return;
+      }
+
+      if (Number(value.year) < 1984) {
+        setVehicleMessage("Exact trim and engine matching is available for model years 1984 and newer.");
+        return;
+      }
+
+      setLoadingTrims(true);
+
+      try {
+        const catalogModels = await fuelMenu(
+          "/vehicle/menu/model?year=" +
+          encodeURIComponent(value.year) +
+          "&make=" +
+          encodeURIComponent(value.make)
+        );
+
+        const variants = matchingVariants(catalogModels, value.model);
+        if (!active) return;
+
+        const exactTrims = variants.map((item) => ({
+          label: item.label,
+          value: item.label
+        }));
+
+        setTrims(exactTrims);
+
+        if (!exactTrims.length) {
+          setVehicleMessage("No exact trim/configuration was published for this year, make, and model.");
+          return;
+        }
+
+        if (exactTrims.length === 1 && !value.trim) {
+          onChange({ ...value, trim: exactTrims[0].value, engine: "" });
+          return;
+        }
+
+        setVehicleMessage("Choose the exact trim/configuration to see only compatible engines.");
+      } catch {
+        if (active) {
+          setTrims([]);
+          setVehicleMessage("Exact trim lookup is temporarily unavailable.");
+        }
+      } finally {
+        if (active) setLoadingTrims(false);
+      }
+    }
+
+    loadTrims();
+    return () => { active = false; };
+  }, [value.year, value.make, value.model]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadEngines() {
+      setEngines([]);
+
+      if (!value.year || !value.make || !value.model || !value.trim) return;
+      if (Number(value.year) < 1984) return;
+
+      setLoadingEngines(true);
+
+      try {
+        const options = await fuelMenu(
+          "/vehicle/menu/options?year=" +
+          encodeURIComponent(value.year) +
+          "&make=" +
+          encodeURIComponent(value.make) +
+          "&model=" +
+          encodeURIComponent(value.trim)
+        );
+
+        const exactEngines = [...new Set(
+          options.map((item) => engineLabel(item.label, value.make)).filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b));
+
+        if (!active) return;
+
+        setEngines(exactEngines);
+        setVehicleMessage(
+          exactEngines.length
+            ? "Only engines published for this exact vehicle configuration are shown."
+            : "No engine choices were published for this exact configuration."
+        );
+      } catch {
+        if (active) {
+          setEngines([]);
+          setVehicleMessage("Exact engine lookup is temporarily unavailable.");
+        }
+      } finally {
+        if (active) setLoadingEngines(false);
+      }
+    }
+
+    loadEngines();
+    return () => { active = false; };
+  }, [value.year, value.make, value.model, value.trim]);
+
   function setField(field, nextValue) {
     const next = { ...value, [field]: nextValue };
+
     if (field === "year") {
       next.make = "";
       next.model = "";
       next.trim = "";
       next.engine = "";
       setModels([]);
+      setTrims([]);
+      setEngines([]);
     }
+
     if (field === "make") {
       next.model = "";
       next.trim = "";
       next.engine = "";
       setModels([]);
+      setTrims([]);
+      setEngines([]);
     }
+
     if (field === "model") {
       next.trim = "";
       next.engine = "";
+      setTrims([]);
+      setEngines([]);
     }
+
     if (field === "trim") {
       next.engine = "";
+      setEngines([]);
     }
+
     onChange(next);
   }
 
   const modelOptions = value.model && !models.includes(value.model)
     ? [value.model, ...models]
     : models;
-
-  const trimOptions = value.model ? (TRIMS_BY_MAKE[value.make] || DEFAULT_TRIMS) : [];
-  const engineOptions = value.model ? getEngineOptions(value.make, value.model) : [];
-  const shownTrims = value.trim && !trimOptions.includes(value.trim) ? [value.trim, ...trimOptions] : trimOptions;
-  const shownEngines = value.engine && !engineOptions.includes(value.engine) ? [value.engine, ...engineOptions] : engineOptions;
 
   return (
     <>
@@ -152,7 +293,12 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
       <label>
         Vehicle make {required && <span aria-hidden="true">*</span>}
-        <select value={value.make || ""} onChange={(e) => setField("make", e.target.value)} required={required} disabled={!value.year}>
+        <select
+          value={value.make || ""}
+          onChange={(e) => setField("make", e.target.value)}
+          required={required}
+          disabled={!value.year}
+        >
           <option value="">{value.year ? "Select make" : "Select year first"}</option>
           {availableMakes.map((make) => <option key={make} value={make}>{make}</option>)}
         </select>
@@ -160,28 +306,73 @@ export default function VehicleFields({ value, onChange, required = false }) {
 
       <label>
         Vehicle model {required && <span aria-hidden="true">*</span>}
-        <select value={value.model || ""} onChange={(e) => setField("model", e.target.value)} required={required} disabled={!value.year || !value.make || loadingModels}>
-          <option value="">{!value.make ? "Select make first" : loadingModels ? "Loading matching models..." : "Select model"}</option>
+        <select
+          value={value.model || ""}
+          onChange={(e) => setField("model", e.target.value)}
+          required={required}
+          disabled={!value.year || !value.make || loadingModels}
+        >
+          <option value="">
+            {!value.make
+              ? "Select make first"
+              : loadingModels
+                ? "Loading matching models..."
+                : "Select model"}
+          </option>
           {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
-          {!modelOptions.includes("Other / Not sure") && <option value="Other / Not sure">Other / Not sure</option>}
+          {!modelOptions.includes("Other / Not sure") && (
+            <option value="Other / Not sure">Other / Not sure</option>
+          )}
         </select>
       </label>
 
       <label>
-        Trim
-        <select value={value.trim || ""} onChange={(e) => setField("trim", e.target.value)} disabled={!value.model}>
-          <option value="">{value.model ? "Select trim" : "Select model first"}</option>
-          {shownTrims.map((trim) => <option key={trim} value={trim}>{trim}</option>)}
+        Trim / configuration
+        <select
+          value={value.trim || ""}
+          onChange={(e) => setField("trim", e.target.value)}
+          disabled={!value.model || loadingTrims || !trims.length}
+        >
+          <option value="">
+            {!value.model
+              ? "Select model first"
+              : loadingTrims
+                ? "Loading exact configurations..."
+                : trims.length
+                  ? "Select exact configuration"
+                  : "No exact configuration listed"}
+          </option>
+          {trims.map((trim) => (
+            <option key={trim.value} value={trim.value}>{trim.label}</option>
+          ))}
         </select>
       </label>
 
       <label>
         Engine
-        <select value={value.engine || ""} onChange={(e) => setField("engine", e.target.value)} disabled={!value.model}>
-          <option value="">{value.model ? "Select engine" : "Select model first"}</option>
-          {shownEngines.map((engine) => <option key={engine} value={engine}>{engine}</option>)}
+        <select
+          value={value.engine || ""}
+          onChange={(e) => setField("engine", e.target.value)}
+          disabled={!value.trim || loadingEngines || !engines.length}
+        >
+          <option value="">
+            {!value.trim
+              ? "Select trim/configuration first"
+              : loadingEngines
+                ? "Loading compatible engines..."
+                : engines.length
+                  ? "Select engine"
+                  : "No engine option listed"}
+          </option>
+          {engines.map((engine) => <option key={engine} value={engine}>{engine}</option>)}
         </select>
       </label>
+
+      {vehicleMessage && (
+        <div className="vehicle-cascade-note" aria-live="polite">
+          {vehicleMessage}
+        </div>
+      )}
     </>
   );
 }

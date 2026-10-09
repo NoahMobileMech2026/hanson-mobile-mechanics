@@ -49,10 +49,10 @@ export default function HomePage() {
         <div className="dealer-hero-overlay"></div>
         <div className="container dealer-hero-grid">
           <div className="dealer-hero-copy">
-            <span className="dealer-kicker">Mobile Service Department</span>
+            <span className="dealer-kicker">Family-Owned Mobile Mechanic Business</span>
             <h1>Auto repair without the trip to a shop.</h1>
             <p>
-              Professional mobile mechanic service in Webster City and within a 35-mile radius. We come to your home, work, or vehicle location.
+              Professional mobile mechanic service based in Webster City, Iowa, serving customers within a 35-mile radius. We are a family-owned mechanic business that comes to your home, work, or vehicle location.
             </p>
             <div className="dealer-hero-actions">
               <a className="dealer-primary-button" href="#request">Request Service</a>

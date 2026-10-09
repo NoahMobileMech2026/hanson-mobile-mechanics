@@ -69,6 +69,7 @@ export default function TeamManagementPage() {
   if(authorized===null || loading) return <main className="admin-loading">Loading team management...</main>;
   if(authorized===false) return <main className="admin-auth-page"><div className="admin-login-card"><h1>Owner access required</h1><a className="btn btn-primary" href="/admin">Back to Sign In</a></div></main>;
 
+  const owners=members.filter(m=>m.role==="owner");
   const teamMembers=members.filter(m=>m.role==="team_member");
 
   return <main className="admin-page">
@@ -139,7 +140,23 @@ export default function TeamManagementPage() {
 
     <section className="admin-panel">
       <div className="admin-panel-heading">
-        <div><h2>Team Accounts</h2><p>Current Team Member logins.</p></div>
+        <div><h2>Owner Accounts</h2><p>Owners have full access to the Owner Panel and financial tools.</p></div>
+      </div>
+      <div className="admin-card-grid">
+        {owners.map(member=>(
+          <div className="admin-record-card" key={member.user_id}>
+            <span className="status-pill">Owner</span>
+            <h3>{member.name || "Owner"}</h3>
+            <p>{member.email || "—"}</p>
+          </div>
+        ))}
+        {!owners.length && <p>No owner accounts found.</p>}
+      </div>
+    </section>
+
+    <section className="admin-panel">
+      <div className="admin-panel-heading">
+        <div><h2>Team Member Accounts</h2><p>Current Team Member logins.</p></div>
       </div>
 
       <div className="admin-table-wrap">

@@ -1463,3 +1463,64 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
   .archive-panel .archive-help { margin-inline: 18px; }
   .archive-panel .admin-card-grid { padding: 14px 18px 18px; }
 }
+
+
+/* Hanson logo artwork */
+.dealer-brand-mark {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: #fff;
+}
+.dealer-brand-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.panel-brand-logo {
+  display: block;
+  width: 118px;
+  height: 118px;
+  object-fit: cover;
+  margin: -6px auto 18px;
+  border-radius: 4px;
+  background: #fff;
+}
+.footer-brand-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+.footer-brand-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  background: #fff;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+.footer-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+@media (max-width: 760px) {
+  .dealer-brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+  .panel-brand-logo {
+    width: 104px;
+    height: 104px;
+  }
+  .footer-brand-group {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .footer-brand-logo {
+    width: 44px;
+    height: 44px;
+  }
+}

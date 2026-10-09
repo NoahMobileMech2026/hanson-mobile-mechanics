@@ -27,7 +27,7 @@ export default function HomePage() {
       <header className="dealer-header">
         <div className="container dealer-nav">
           <a className="dealer-brand" href="#top" aria-label="Hanson's Mobile Mechanics">
-            <span className="dealer-brand-mark">HMM</span>
+            <span className="dealer-brand-mark"><img src="/hanson-logo.jpg" alt="" aria-hidden="true" /></span>
             <span>
               <strong>Hanson&apos;s Mobile Mechanics</strong>
               <small>Mobile Auto Repair</small>
@@ -61,6 +61,7 @@ export default function HomePage() {
           </div>
 
           <aside className="dealer-service-panel">
+            <img className="panel-brand-logo" src="/hanson-logo.jpg" alt="Hanson's Mobile Mechanics logo" />
             <span className="panel-label">Quick Service Request</span>
             <h2>Need a mechanic?</h2>
             <p>Tell us the vehicle, location, and what it is doing. We&apos;ll review it and contact you about the next step.</p>
@@ -187,9 +188,12 @@ export default function HomePage() {
 
       <footer className="dealer-footer">
         <div className="container dealer-footer-inner">
-          <div>
-            <strong>Hanson&apos;s Mobile Mechanics</strong>
-            <span>Webster City, Iowa</span>
+          <div className="footer-brand-group">
+            <img className="footer-brand-logo" src="/hanson-logo.jpg" alt="" aria-hidden="true" />
+            <div className="footer-brand-copy">
+              <strong>Hanson&apos;s Mobile Mechanics</strong>
+              <span>Webster City, Iowa</span>
+            </div>
           </div>
           <div>
             <span>35 Mile Service Radius</span>

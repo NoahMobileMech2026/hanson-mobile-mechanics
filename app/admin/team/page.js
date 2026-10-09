@@ -6,6 +6,7 @@ import { getSupabase } from "../../lib/supabaseClient";
 export default function TeamPanelPage() {
   const supabase = useMemo(() => getSupabase(), []);
   const [authorized,setAuthorized] = useState(null);
+  const [role,setRole] = useState(null);
   const [requests,setRequests] = useState([]);
   const [jobs,setJobs] = useState([]);
   const [busyId,setBusyId] = useState(null);
@@ -18,10 +19,8 @@ export default function TeamPanelPage() {
     if(!user){ window.location.href="/admin"; return; }
 
     const { data:admin } = await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if(!admin){ setAuthorized(false); return; }
-    if(admin.role === "owner"){ window.location.href="/admin/owner"; return; }
-    if(admin.role !== "team_member"){ setAuthorized(false); return; }
-
+    if(!admin || !["owner","team_member"].includes(admin.role)){ setAuthorized(false); return; }
+    setRole(admin.role);
     setAuthorized(true);
     await load();
   }
@@ -113,10 +112,11 @@ export default function TeamPanelPage() {
       <div>
         <div className="admin-kicker">Hanson Mobile Mechanics</div>
         <h1>Team Member Panel</h1>
-        <p>Calls, customers, active jobs, and today’s schedule.</p>
+        <p>{role === "owner" ? "Owner preview of what team members can access." : "Calls, customers, active jobs, and today’s schedule."}</p>
       </div>
       <div className="admin-header-actions">
-        <span className="status-pill">Team Member</span>
+        <span className="status-pill">{role === "owner" ? "Owner Preview" : "Team Member"}</span>
+        {role === "owner" && <a className="btn btn-secondary" href="/admin/owner">Owner Panel</a>}
         <a className="btn btn-primary" href="/admin/call-intake">New Call Intake</a>
         <a className="btn btn-secondary" href="/admin/schedule">Schedule</a>
         <button className="btn btn-secondary" onClick={signOut}>Sign Out</button>

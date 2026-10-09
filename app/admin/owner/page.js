@@ -224,6 +224,7 @@ export default function AdminPage() {
         <div className="admin-header-actions">
           <span className="status-pill">Owner</span>
           <a className="btn btn-primary" href="/admin/call-intake">New Call Intake</a>
+          <a className="btn btn-secondary" href="/admin/team">View Team Panel</a>
           <a className="btn btn-secondary" href="/">View Website</a>
           <button className="btn btn-primary" onClick={signOut}>Sign Out</button>
         </div>

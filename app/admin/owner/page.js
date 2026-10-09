@@ -14,8 +14,8 @@ export default function OwnerCommandCenter() {
     const { data:sessionData }=await supabase.auth.getSession();
     const user=sessionData.session?.user;
     if(!user){window.location.href="/admin";return;}
-    const { data:admin }=await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if(!admin || admin.role!=="owner"){setAuthorized(false);return;}
+    const { data:admin }=await supabase.from("admin_users").select("role,active").eq("user_id",user.id).maybeSingle();
+    if(!admin || admin.active === false || admin.role!=="owner"){setAuthorized(false);return;}
     setAuthorized(true);
 
     const [r,j]=await Promise.all([

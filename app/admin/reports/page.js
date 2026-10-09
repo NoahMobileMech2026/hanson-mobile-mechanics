@@ -20,7 +20,7 @@ export default function ReportsPage() {
     const user = sessionData.session?.user;
     if (!user) { window.location.href="/admin"; return; }
     const { data: admin } = await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if (!admin) { setAuthorized(false); return; }
+    if (!admin || admin.role !== "owner") { setAuthorized(false); return; }
     setAuthorized(true);
     const [p,e,j,c] = await Promise.all([
       supabase.from("payments").select("*").order("paid_at",{ascending:false}),

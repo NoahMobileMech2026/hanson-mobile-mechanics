@@ -229,6 +229,8 @@ export default function AdminPage() {
         <a href="#invoices">Invoices</a>
         <a href="#customers">Customers</a>
         <a href="#expenses">Expenses</a>
+        <a href="/admin/schedule">Schedule</a>
+        <a href="/admin/reports">Reports</a>
       </nav>
 
       <section className="admin-panel" id="requests">

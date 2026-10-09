@@ -2,201 +2,420 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-function addCurrent(options, current, label) {
-  if (!current) return options;
-  if (options.some((item) => item.label === current || item.value === current)) return options;
-  return [{ label: current + " (saved)", value: current }, ...options];
+const MAKES = [
+  "Acura","Alfa Romeo","Audi","BMW","Buick","Cadillac","Chevrolet","Chrysler",
+  "Dodge","Fiat","Ford","Genesis","GMC","Honda","Hummer","Hyundai","Infiniti",
+  "Isuzu","Jaguar","Jeep","Kia","Land Rover","Lexus","Lincoln","Mazda",
+  "Mercedes-Benz","Mercury","MINI","Mitsubishi","Nissan","Oldsmobile","Pontiac",
+  "Porsche","Ram","Saab","Saturn","Scion","Subaru","Suzuki","Tesla","Toyota",
+  "Volkswagen","Volvo","Other / Not listed"
+];
+
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
-async function loadLevel(params) {
-  try {
-    const query = new URLSearchParams(params);
-    const response = await fetch("/api/vehicle-catalog?" + query.toString(), { cache: "no-store" });
-    if (!response.ok) throw new Error("Vehicle lookup request failed.");
-    const data = await response.json();
-    return {
-      options: Array.isArray(data.options) ? data.options : [],
-      error: data.error || "",
-      details: data.details || null
-    };
-  } catch {
-    return {
-      options: [],
-      error: "Vehicle data could not load. Please try the selection again.",
-      details: null
-    };
+function decodeXml(value) {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'");
+}
+
+function parseMenuText(text) {
+  const trimmed = String(text || "").trim();
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    const json = JSON.parse(trimmed);
+    return asArray(json?.menuItems?.menuItem)
+      .map((item) => ({
+        label: String(item?.text ?? "").trim(),
+        value: String(item?.value ?? "").trim()
+      }))
+      .filter((item) => item.label && item.value);
   }
+
+  const doc = new DOMParser().parseFromString(trimmed, "application/xml");
+  return [...doc.querySelectorAll("menuItem")]
+    .map((item) => ({
+      label: decodeXml(item.querySelector("text")?.textContent || "").trim(),
+      value: decodeXml(item.querySelector("value")?.textContent || "").trim()
+    }))
+    .filter((item) => item.label && item.value);
+}
+
+function parseVehicleText(text) {
+  const trimmed = String(text || "").trim();
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    const json = JSON.parse(trimmed);
+    return json?.vehicle ?? json;
+  }
+
+  const doc = new DOMParser().parseFromString(trimmed, "application/xml");
+  const read = (tag) => decodeXml(doc.querySelector(tag)?.textContent || "").trim();
+
+  return {
+    displ: read("displ"),
+    cylinders: read("cylinders"),
+    fuelType1: read("fuelType1"),
+    fuelType: read("fuelType"),
+    drive: read("drive"),
+    trany: read("trany")
+  };
+}
+
+async function fuelText(path) {
+  const response = await fetch("https://www.fueleconomy.gov/ws/rest" + path, {
+    headers: { Accept: "application/json, application/xml;q=0.9, text/xml;q=0.8" }
+  });
+  if (!response.ok) throw new Error("Fuel economy vehicle catalog unavailable.");
+  return response.text();
+}
+
+async function fuelMenu(path) {
+  return parseMenuText(await fuelText(path));
+}
+
+async function nhtsaModels(year, make) {
+  const response = await fetch(
+    "https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/" +
+      encodeURIComponent(make) +
+      "/modelyear/" +
+      encodeURIComponent(year) +
+      "?format=json"
+  );
+  if (!response.ok) throw new Error("NHTSA model lookup unavailable.");
+  const json = await response.json();
+  return [...new Set((json.Results || []).map((item) => item.Model_Name).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b))
+    .map((name)=>({ label:name, value:name }));
+}
+
+function engineLabel(vehicle) {
+  const liters = String(vehicle?.displ || "").trim();
+  const cylinders = String(vehicle?.cylinders || "").trim();
+  const fuel = String(vehicle?.fuelType1 || vehicle?.fuelType || "").trim();
+  const parts = [];
+
+  if (liters && liters !== "0") parts.push(liters + "L");
+  if (cylinders) parts.push(cylinders + "-cylinder");
+  if (fuel) parts.push(fuel);
+
+  if (!parts.length && /electric/i.test(fuel)) return "Electric";
+  return parts.join(" • ") || "";
 }
 
 export default function VehicleFields({ value, onChange, required = false }) {
   const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: currentYear - 1983 }, (_, i) => {
-      const year = String(currentYear - i);
-      return { label: year, value: year };
-    });
+    const newest = new Date().getFullYear() + 1;
+    return Array.from({ length: newest - 1983 }, (_, i) => String(newest - i));
   }, []);
-  const [makes,setMakes] = useState([]);
+
   const [models,setModels] = useState([]);
-  const [configs,setConfigs] = useState([]);
+  const [configurations,setConfigurations] = useState([]);
   const [engines,setEngines] = useState([]);
-  const [loading,setLoading] = useState("");
+  const [configurationId,setConfigurationId] = useState("");
+  const [manualModel,setManualModel] = useState(false);
+  const [manualConfiguration,setManualConfiguration] = useState(false);
+  const [loadingModels,setLoadingModels] = useState(false);
+  const [loadingConfigurations,setLoadingConfigurations] = useState(false);
+  const [loadingEngines,setLoadingEngines] = useState(false);
   const [message,setMessage] = useState("");
-  const [configId,setConfigId] = useState("");
 
-  useEffect(() => {
-    let active=true;
-    setMakes([]); setModels([]); setConfigs([]); setEngines([]); setConfigId("");
-    if(!value.year) return ()=>{active=false;};
-    setLoading("make");
-    loadLevel({ level:"makes", year:value.year }).then((r)=>{
-      if(!active) return;
-      setMakes(addCurrent(r.options,value.make,"make"));
-      setMessage(r.error);
-      setLoading("");
-    }).catch(()=>{
-      if(!active) return;
-      setMessage("Vehicle makes could not load. Select the year again to retry.");
-      setLoading("");
-    });
-    return ()=>{active=false;};
-  },[value.year]);
+  useEffect(()=>{
+    setModels([]);
+    setConfigurations([]);
+    setEngines([]);
+    setConfigurationId("");
+    setManualModel(false);
+    setManualConfiguration(false);
+    setMessage("");
+  },[value.year,value.make]);
 
-  useEffect(() => {
+  useEffect(()=>{
     let active=true;
-    setModels([]); setConfigs([]); setEngines([]); setConfigId("");
-    if(!value.year || !value.make) return ()=>{active=false;};
-    setLoading("model");
-    loadLevel({ level:"models", year:value.year, make:value.make }).then((r)=>{
-      if(!active) return;
-      setModels(addCurrent(r.options,value.model,"model"));
-      setMessage(r.error);
-      setLoading("");
-    }).catch(()=>{
-      if(!active) return;
-      setMessage("Vehicle models could not load. Select the make again to retry.");
-      setLoading("");
-    });
+
+    async function loadModels(){
+      setModels([]);
+      setConfigurations([]);
+      setEngines([]);
+      setConfigurationId("");
+
+      if(!value.year || !value.make || value.make==="Other / Not listed") return;
+
+      setLoadingModels(true);
+      setMessage("");
+
+      try{
+        let options=[];
+        try{
+          options=await fuelMenu(
+            "/vehicle/menu/model?year="+encodeURIComponent(value.year)+
+            "&make="+encodeURIComponent(value.make)
+          );
+        }catch{
+          options=[];
+        }
+
+        if(!options.length){
+          try{
+            options=await nhtsaModels(value.year,value.make);
+          }catch{
+            options=[];
+          }
+        }
+
+        if(!active) return;
+        setModels(options);
+        if(!options.length){
+          setManualModel(true);
+          setMessage("The vehicle catalog did not return models. Enter the model manually below.");
+        }
+      } finally {
+        if(active) setLoadingModels(false);
+      }
+    }
+
+    loadModels();
     return ()=>{active=false;};
   },[value.year,value.make]);
 
-  useEffect(() => {
+  useEffect(()=>{
     let active=true;
-    setConfigs([]); setEngines([]); setConfigId("");
-    if(!value.year || !value.make || !value.model) return ()=>{active=false;};
-    setLoading("configuration");
-    loadLevel({
-      level:"configurations",
-      year:value.year,
-      make:value.make,
-      model:value.model
-    }).then((r)=>{
-      if(!active) return;
-      const opts=r.options;
-      setConfigs(addCurrent(opts,value.trim,"configuration"));
-      if(!opts.length && !r.error) {
-        setMessage("No exact EPA configuration is published for this vehicle. Do not guess the trim or engine.");
-      } else {
-        setMessage(r.error || "Choose the exact configuration. The engine list will then be limited to that vehicle record.");
+
+    async function loadConfigurations(){
+      setConfigurations([]);
+      setEngines([]);
+      setConfigurationId("");
+
+      if(!value.year || !value.make || !value.model || manualModel) return;
+
+      setLoadingConfigurations(true);
+      setMessage("");
+
+      try{
+        const options=await fuelMenu(
+          "/vehicle/menu/options?year="+encodeURIComponent(value.year)+
+          "&make="+encodeURIComponent(value.make)+
+          "&model="+encodeURIComponent(value.model)
+        );
+
+        if(!active) return;
+        setConfigurations(options);
+
+        if(!options.length){
+          setManualConfiguration(true);
+          setMessage("No exact configuration was returned for this vehicle. Enter the trim/configuration manually.");
+        } else {
+          setManualConfiguration(false);
+          setMessage("Select the exact configuration to narrow the engine.");
+        }
+      } catch {
+        if(active){
+          setManualConfiguration(true);
+          setMessage("Exact configuration lookup is unavailable. Enter the trim/configuration manually.");
+        }
+      } finally {
+        if(active) setLoadingConfigurations(false);
       }
-      setLoading("");
-    });
-    return ()=>{active=false;};
-  },[value.year,value.make,value.model]);
+    }
 
-  useEffect(() => {
+    loadConfigurations();
+    return ()=>{active=false;};
+  },[value.year,value.make,value.model,manualModel]);
+
+  useEffect(()=>{
     let active=true;
-    setEngines([]);
-    if(!configId) return ()=>{active=false;};
-    setLoading("engine");
-    loadLevel({ level:"engine", vehicleId:configId }).then((r)=>{
-      if(!active) return;
-      const opts=addCurrent(r.options,value.engine,"engine");
-      setEngines(opts);
-      setMessage(r.error || "Only the engine published for the selected exact configuration is shown.");
-      setLoading("");
-    });
-    return ()=>{active=false;};
-  },[configId]);
 
-  function setField(field,nextValue) {
+    async function loadEngine(){
+      setEngines([]);
+      if(!configurationId) return;
+
+      setLoadingEngines(true);
+      try{
+        const vehicle=parseVehicleText(await fuelText("/vehicle/"+encodeURIComponent(configurationId)));
+        const label=engineLabel(vehicle);
+
+        if(!active) return;
+        setEngines(label ? [label] : []);
+        setMessage(
+          label
+            ? "Engine matched to the selected exact configuration."
+            : "The catalog did not publish an engine description. Enter it manually."
+        );
+      } catch {
+        if(active){
+          setEngines([]);
+          setMessage("Engine lookup is unavailable. Enter the engine manually.");
+        }
+      } finally {
+        if(active) setLoadingEngines(false);
+      }
+    }
+
+    loadEngine();
+    return ()=>{active=false;};
+  },[configurationId]);
+
+  function change(field,nextValue){
     const next={...value,[field]:nextValue};
 
     if(field==="year"){
       next.make=""; next.model=""; next.trim=""; next.engine="";
-      setConfigId("");
     }
     if(field==="make"){
       next.model=""; next.trim=""; next.engine="";
-      setConfigId("");
+      setManualModel(nextValue==="Other / Not listed");
     }
     if(field==="model"){
       next.trim=""; next.engine="";
-      setConfigId("");
+      setManualConfiguration(false);
+      setConfigurationId("");
     }
     if(field==="trim"){
       next.engine="";
-      const selected=configs.find((item)=>item.label===nextValue || item.value===nextValue);
-      setConfigId(selected && /^\d+$/.test(selected.value) ? selected.value : "");
     }
 
     onChange(next);
   }
 
-  function chooseConfiguration(event) {
+  function chooseModel(event){
+    const nextValue=event.target.value;
+    if(nextValue==="__manual__"){
+      setManualModel(true);
+      setManualConfiguration(true);
+      setConfigurationId("");
+      onChange({...value,model:"",trim:"",engine:""});
+      return;
+    }
+    setManualModel(false);
+    change("model",nextValue);
+  }
+
+  function chooseConfiguration(event){
     const id=event.target.value;
-    const selected=configs.find((item)=>item.value===id);
-    setConfigId(id);
+    if(id==="__manual__"){
+      setManualConfiguration(true);
+      setConfigurationId("");
+      onChange({...value,trim:"",engine:""});
+      return;
+    }
+
+    const selected=configurations.find((item)=>item.value===id);
+    setManualConfiguration(false);
+    setConfigurationId(id);
     onChange({...value,trim:selected?.label || "",engine:""});
   }
+
+  const selectedConfigurationValue =
+    configurationId ||
+    configurations.find((item)=>item.label===value.trim)?.value ||
+    "";
 
   return <>
     <label>
       Vehicle year
-      <select value={value.year || ""} onChange={(e)=>setField("year",e.target.value)}>
+      <select value={value.year || ""} onChange={(e)=>change("year",e.target.value)}>
         <option value="">Select year</option>
-        {years.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
+        {years.map((year)=><option key={year} value={year}>{year}</option>)}
       </select>
     </label>
 
     <label>
       Vehicle make {required && <span aria-hidden="true">*</span>}
-      <select value={value.make || ""} onChange={(e)=>setField("make",e.target.value)} required={required} disabled={!value.year || loading==="make"}>
-        <option value="">{!value.year ? "Select year first" : loading==="make" ? "Loading makes..." : "Select make"}</option>
-        {makes.map((item)=><option key={item.value} value={item.label}>{item.label}</option>)}
+      <select
+        value={value.make || ""}
+        onChange={(e)=>change("make",e.target.value)}
+        required={required}
+        disabled={!value.year}
+      >
+        <option value="">{value.year ? "Select make" : "Select year first"}</option>
+        {MAKES.map((make)=><option key={make} value={make}>{make}</option>)}
       </select>
     </label>
 
     <label>
       Vehicle model {required && <span aria-hidden="true">*</span>}
-      <select value={value.model || ""} onChange={(e)=>setField("model",e.target.value)} required={required} disabled={!value.make || loading==="model"}>
-        <option value="">{!value.make ? "Select make first" : loading==="model" ? "Loading models..." : "Select model"}</option>
-        {models.map((item)=><option key={item.value} value={item.label}>{item.label}</option>)}
-      </select>
+      {!manualModel ? (
+        <select
+          value={value.model || ""}
+          onChange={chooseModel}
+          required={required}
+          disabled={!value.make || loadingModels}
+        >
+          <option value="">
+            {!value.make
+              ? "Select make first"
+              : loadingModels
+                ? "Loading models..."
+                : models.length
+                  ? "Select model"
+                  : "No model list returned"}
+          </option>
+          {models.map((item)=><option key={item.value} value={item.label}>{item.label}</option>)}
+          <option value="__manual__">Other / Enter manually</option>
+        </select>
+      ) : (
+        <input
+          required={required}
+          value={value.model || ""}
+          onChange={(e)=>onChange({...value,model:e.target.value,trim:"",engine:""})}
+          placeholder="Enter vehicle model"
+        />
+      )}
     </label>
 
     <label>
       Trim / exact configuration
-      <select
-        value={configId || (configs.find((item)=>item.label===value.trim)?.value || "")}
-        onChange={chooseConfiguration}
-        disabled={!value.model || loading==="configuration" || !configs.length}
-      >
-        <option value="">
-          {!value.model ? "Select model first" : loading==="configuration" ? "Loading exact configurations..." : configs.length ? "Select exact configuration" : "No verified configuration listed"}
-        </option>
-        {configs.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
+      {!manualModel && !manualConfiguration ? (
+        <select
+          value={selectedConfigurationValue}
+          onChange={chooseConfiguration}
+          disabled={!value.model || loadingConfigurations}
+        >
+          <option value="">
+            {!value.model
+              ? "Select model first"
+              : loadingConfigurations
+                ? "Loading configurations..."
+                : configurations.length
+                  ? "Select exact configuration"
+                  : "No configuration list returned"}
+          </option>
+          {configurations.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
+          <option value="__manual__">Other / Enter manually</option>
+        </select>
+      ) : (
+        <input
+          value={value.trim || ""}
+          onChange={(e)=>onChange({...value,trim:e.target.value,engine:""})}
+          placeholder="Enter trim/configuration (optional)"
+        />
+      )}
     </label>
 
     <label>
       Engine
-      <select value={value.engine || ""} onChange={(e)=>setField("engine",e.target.value)} disabled={!configId || loading==="engine" || !engines.length}>
-        <option value="">
-          {!configId ? "Select configuration first" : loading==="engine" ? "Loading exact engine..." : engines.length ? "Select engine" : "No verified engine listed"}
-        </option>
-        {engines.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
+      {configurationId && engines.length ? (
+        <select
+          value={value.engine || ""}
+          onChange={(e)=>change("engine",e.target.value)}
+          disabled={loadingEngines}
+        >
+          <option value="">{loadingEngines ? "Loading engine..." : "Select engine"}</option>
+          {engines.map((engine)=><option key={engine} value={engine}>{engine}</option>)}
+        </select>
+      ) : (
+        <input
+          value={value.engine || ""}
+          onChange={(e)=>change("engine",e.target.value)}
+          placeholder={loadingEngines ? "Loading engine..." : "Enter engine (optional)"}
+        />
+      )}
     </label>
 
     {message && <div className="vehicle-cascade-note" aria-live="polite">{message}</div>}

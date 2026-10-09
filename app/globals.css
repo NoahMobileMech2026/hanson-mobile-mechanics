@@ -1625,3 +1625,161 @@ button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
     flex-basis: 52px;
   }
 }
+
+
+/* Full dark customer-facing theme */
+body {
+  background: #0b0d0f;
+  color: #f5f5f5;
+}
+
+.dealer-header {
+  background: rgba(12,14,16,.98) !important;
+  border-bottom-color: #2a2d30 !important;
+}
+.dealer-brand strong,
+.dealer-links a {
+  color: #f7f7f7 !important;
+}
+.dealer-brand small {
+  color: #aeb3b7 !important;
+}
+.dealer-brand-mark {
+  background: #ffffff !important;
+}
+.dealer-nav-cta {
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05);
+}
+
+.dealer-feature-strip,
+.dealer-section,
+.dealer-why {
+  background: #0f1215 !important;
+  color: #f4f4f4 !important;
+}
+.dealer-feature-grid > div,
+.dealer-service-card,
+.dealer-why-list > div {
+  border-color: #2b2f32 !important;
+}
+.dealer-feature-grid strong,
+.dealer-service-card h3,
+.dealer-section-heading h2,
+.dealer-why h2,
+.dealer-area h2,
+.dealer-request h2 {
+  color: #ffffff !important;
+}
+.dealer-feature-grid small,
+.dealer-section-heading > p,
+.dealer-service-card p,
+.dealer-note,
+.dealer-why-copy p,
+.dealer-why-list small {
+  color: #aeb4b8 !important;
+}
+.dealer-service-card {
+  background: #15191c !important;
+}
+.dealer-service-card:hover {
+  background: #1b2024 !important;
+  border-color: #3b4145 !important;
+}
+
+.dealer-area {
+  background: #111519 !important;
+  border-block-color: #2b2f32 !important;
+}
+.dealer-area p {
+  color: #aeb4b8 !important;
+}
+.dealer-area-stat {
+  background: #171b1f !important;
+  border-color: #33383c !important;
+  border-top-color: var(--red) !important;
+}
+.dealer-area-stat span,
+.dealer-area-stat small {
+  color: #9fa6aa !important;
+}
+.dealer-area-stat strong {
+  color: #ffffff !important;
+}
+.dealer-area::after {
+  color: rgba(255,255,255,.02) !important;
+}
+
+.dealer-request {
+  background: #0d1013 !important;
+  border-top-color: #2b2f32 !important;
+}
+.dealer-request-copy > p,
+.dealer-contact-callout span,
+.dealer-contact-callout small {
+  color: #aeb4b8 !important;
+}
+.dealer-contact-callout {
+  border-top-color: #2b2f32 !important;
+}
+
+.service-form {
+  background: #171b1f !important;
+  color: #f5f5f5 !important;
+  border-color: #34393d !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.28) !important;
+}
+.service-form label,
+.service-form legend {
+  color: #f5f5f5 !important;
+}
+.service-form input,
+.service-form textarea,
+.service-form select {
+  background: #0f1215 !important;
+  color: #ffffff !important;
+  border-color: #3a4044 !important;
+}
+.service-form input::placeholder,
+.service-form textarea::placeholder {
+  color: #888f94 !important;
+}
+.service-form select:disabled {
+  background: #20252a !important;
+  color: #7f878c !important;
+  border-color: #30363a !important;
+}
+.contact-options label {
+  background: #101316 !important;
+  border-color: #34393d !important;
+  color: #f5f5f5 !important;
+}
+.form-note {
+  color: #9ca3a8 !important;
+}
+
+.vehicle-cascade-note {
+  background: #121619 !important;
+  color: #aeb4b8 !important;
+  border-left-color: var(--red) !important;
+}
+.vehicle-field-hint {
+  color: #e2b96f !important;
+}
+
+.dealer-bottom-cta {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.dealer-footer {
+  background: #080a0c !important;
+  border-top: 1px solid #202428;
+}
+
+@media (max-width: 760px) {
+  .dealer-header {
+    background: #0c0e10 !important;
+  }
+  .dealer-feature-grid > div {
+    background: #0f1215 !important;
+  }
+}

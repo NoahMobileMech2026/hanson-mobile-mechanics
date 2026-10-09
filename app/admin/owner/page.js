@@ -225,6 +225,7 @@ export default function AdminPage() {
           <span className="status-pill">Owner</span>
           <a className="btn btn-primary" href="/admin/call-intake">New Call Intake</a>
           <a className="btn btn-secondary" href="/admin/team">View Team Panel</a>
+          <a className="btn btn-secondary" href="/admin/team-management">Manage Team</a>
           <a className="btn btn-secondary" href="/">View Website</a>
           <button className="btn btn-primary" onClick={signOut}>Sign Out</button>
         </div>
@@ -242,6 +243,7 @@ export default function AdminPage() {
       <nav className="admin-section-nav">
         <a href="/admin/call-intake">Call Intake</a>
         <a href="/admin/team">Team Panel</a>
+        <a href="/admin/team-management">Manage Team</a>
         <a href="#requests">Requests</a>
         <a href="#jobs">Jobs</a>
         <a href="#archive">Archive</a>

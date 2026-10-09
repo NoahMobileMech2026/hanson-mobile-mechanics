@@ -53,24 +53,24 @@ export default function TeamPanel() {
       </div>
     </header>
 
-    <section className="admin-launch-grid team-launch-grid">
-      <a className="admin-launch-card launch-red" href="/admin/call-intake">
-        <span className="launch-number">1</span>
+    <section className="admin-quick-grid team-quick-grid">
+      <a className="admin-quick-card primary" href="/admin/call-intake">
+        
         <strong>New Phone Call</strong>
         <small>Start customer intake</small>
       </a>
-      <a className="admin-launch-card" href="/admin/requests">
-        <span className="launch-number">2</span>
+      <a className="admin-quick-card" href="/admin/requests">
+        
         <strong>Requests</strong>
         <small>{counts.requests} waiting</small>
       </a>
-      <a className="admin-launch-card" href="/admin/jobs">
-        <span className="launch-number">3</span>
+      <a className="admin-quick-card" href="/admin/jobs">
+        
         <strong>Jobs</strong>
         <small>{counts.jobs} active</small>
       </a>
-      <a className="admin-launch-card" href="/admin/schedule">
-        <span className="launch-number">4</span>
+      <a className="admin-quick-card" href="/admin/schedule">
+        
         <strong>Schedule</strong>
         <small>{counts.today} scheduled today</small>
       </a>

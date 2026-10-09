@@ -29,11 +29,11 @@ export default function OwnerToolsPage(){
       </div>
     </header>
 
-    <section className="admin-launch-grid owner-tools-grid">
-      <a className="admin-launch-card" href="/admin/invoices"><span className="launch-number">1</span><strong>Invoices</strong><small>Balances and payments</small></a>
-      <a className="admin-launch-card" href="/admin/estimates"><span className="launch-number">2</span><strong>Estimates</strong><small>Customer estimates</small></a>
-      <a className="admin-launch-card" href="/admin/expenses"><span className="launch-number">3</span><strong>Expenses</strong><small>Add business costs</small></a>
-      <a className="admin-launch-card" href="/admin/reports"><span className="launch-number">4</span><strong>Reports</strong><small>Totals and history</small></a>
+    <section className="admin-quick-grid team-quick-grid">
+      <a className="admin-quick-card" href="/admin/invoices"><strong>Invoices</strong><small>Balances and payments</small></a>
+      <a className="admin-quick-card" href="/admin/estimates"><strong>Estimates</strong><small>Customer estimates</small></a>
+      <a className="admin-quick-card" href="/admin/expenses"><strong>Expenses</strong><small>Add business costs</small></a>
+      <a className="admin-quick-card" href="/admin/reports"><strong>Reports</strong><small>Totals and history</small></a>
     </section>
   </main>;
 }

@@ -48,34 +48,34 @@ export default function OwnerCommandCenter() {
       <button className="btn btn-secondary" onClick={signOut}>Sign Out</button>
     </header>
 
-    <section className="admin-launch-grid">
-      <a className="admin-launch-card launch-red" href="/admin/call-intake">
-        <span className="launch-number">1</span>
+    <section className="admin-quick-grid">
+      <a className="admin-quick-card primary" href="/admin/call-intake">
+        
         <strong>New Phone Call</strong>
         <small>Start customer intake</small>
       </a>
-      <a className="admin-launch-card" href="/admin/requests">
-        <span className="launch-number">2</span>
+      <a className="admin-quick-card" href="/admin/requests">
+        
         <strong>Requests</strong>
         <small>{counts.requests} waiting</small>
       </a>
-      <a className="admin-launch-card" href="/admin/jobs">
-        <span className="launch-number">3</span>
+      <a className="admin-quick-card" href="/admin/jobs">
+        
         <strong>Jobs</strong>
         <small>{counts.jobs} active</small>
       </a>
-      <a className="admin-launch-card" href="/admin/schedule">
-        <span className="launch-number">4</span>
+      <a className="admin-quick-card" href="/admin/schedule">
+        
         <strong>Schedule</strong>
         <small>{counts.today} scheduled today</small>
       </a>
-      <a className="admin-launch-card" href="/admin/owner-tools">
-        <span className="launch-number">5</span>
+      <a className="admin-quick-card" href="/admin/owner-tools">
+        
         <strong>Money & Paperwork</strong>
         <small>Invoices, estimates, expenses, reports</small>
       </a>
-      <a className="admin-launch-card" href="/admin/team-management">
-        <span className="launch-number">6</span>
+      <a className="admin-quick-card" href="/admin/team-management">
+        
         <strong>Team Logins</strong>
         <small>Add or review staff access</small>
       </a>

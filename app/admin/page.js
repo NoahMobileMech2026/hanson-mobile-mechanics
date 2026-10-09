@@ -27,8 +27,8 @@ export default function AdminLoginRouter() {
 
   async function routeUser(userId){
     setChecking(true);
-    const { data:admin,error } = await supabase.from("admin_users").select("role").eq("user_id",userId).maybeSingle();
-    if(error || !admin){
+    const { data:admin,error } = await supabase.from("admin_users").select("role,active").eq("user_id",userId).maybeSingle();
+    if(error || !admin || admin.active === false){
       setMessage("This account is signed in but does not have Hanson Mobile Mechanics admin access.");
       setChecking(false);
       return;

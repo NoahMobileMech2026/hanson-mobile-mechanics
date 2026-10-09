@@ -14,7 +14,8 @@ const BLANK = {
 
 export default function CallIntakePage() {
   const supabase = useMemo(() => getSupabase(), []);
-  const [authorized,setAuthorized] = useState(null);\n  const [role,setRole] = useState(null);
+  const [authorized,setAuthorized] = useState(null);
+  const [role,setRole] = useState(null);
   const [form,setForm] = useState(BLANK);
   const [saving,setSaving] = useState(false);
   const [message,setMessage] = useState("");
@@ -26,7 +27,9 @@ export default function CallIntakePage() {
     const user = data.session?.user;
     if (!user) { window.location.href="/admin"; return; }
     const { data: admin } = await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    setAuthorized(!!admin);
+    if(!admin || !["owner","team_member"].includes(admin.role)){ setAuthorized(false); return; }
+    setRole(admin.role);
+    setAuthorized(true);
   }
 
   function change(e){ setForm(v => ({...v,[e.target.name]:e.target.value})); }

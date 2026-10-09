@@ -3,7 +3,7 @@ import ServiceRequestForm from "./components/ServiceRequestForm";
 const services = [
   "General Repairs",
   "General Service",
-  "Tire Repair",
+  "Tire Repair*",
   "Brakes",
   "Check Engine Lights",
   "Suspension",
@@ -94,9 +94,10 @@ export default function HomePage() {
             ))}
           </div>
 
-          <p className="service-disclaimer">
-            Not sure whether your repair can be completed mobile? Call or send a request and describe what the vehicle is doing.
-          </p>
+          <div className="service-disclaimer">
+            <p><strong>*Tire service:</strong> Tire repairs only. We do not replace tires. We can change a tire when you have a usable spare available.</p>
+            <p>Not sure whether your repair can be completed mobile? Call or send a request and describe what the vehicle is doing.</p>
+          </div>
         </div>
       </section>
 

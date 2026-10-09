@@ -66,6 +66,29 @@ export default function TeamManagementPage() {
     }
   }
 
+  async function changeAccess(member){
+    const makeActive = member.active === false;
+    if(!makeActive){
+      const confirmed = window.confirm("Deactivate this Team Member login? They will no longer be able to sign in or use the admin area.");
+      if(!confirmed) return;
+    }
+
+    setMessage("");
+    setSaving(true);
+    try{
+      await invoke({
+        action: makeActive ? "reactivate" : "deactivate",
+        user_id: member.user_id
+      });
+      setMessage(makeActive ? "Team Member login restored." : "Team Member login deactivated.");
+      await loadMembers();
+    }catch(err){
+      setMessage(err?.message || "Could not change team member access.");
+    }finally{
+      setSaving(false);
+    }
+  }
+
   if(authorized===null || loading) return <main className="admin-loading">Loading team management...</main>;
   if(authorized===false) return <main className="admin-auth-page"><div className="admin-login-card"><h1>Owner access required</h1><a className="btn btn-primary" href="/admin">Back to Sign In</a></div></main>;
 
@@ -161,17 +184,27 @@ export default function TeamManagementPage() {
 
       <div className="admin-table-wrap">
         <table className="admin-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Created</th><th>Access</th></tr></thead>
           <tbody>
             {teamMembers.map(member=>(
               <tr key={member.user_id}>
                 <td><strong>{member.name || "Team Member"}</strong></td>
                 <td>{member.email || "—"}</td>
-                <td><span className="status-pill">Team Member</span></td>
+                <td><span className="status-pill">{member.active === false ? "Inactive" : "Active"}</span></td>
                 <td>{member.created_at ? new Date(member.created_at).toLocaleDateString() : "—"}</td>
+                <td>
+                  <button
+                    className={member.active === false ? "admin-small-button" : "danger-link"}
+                    type="button"
+                    disabled={saving}
+                    onClick={()=>changeAccess(member)}
+                  >
+                    {member.active === false ? "Restore Login" : "Deactivate Login"}
+                  </button>
+                </td>
               </tr>
             ))}
-            {!teamMembers.length && <tr><td colSpan="4">No team member accounts have been created yet.</td></tr>}
+            {!teamMembers.length && <tr><td colSpan="5">No team member accounts have been created yet.</td></tr>}
           </tbody>
         </table>
       </div>

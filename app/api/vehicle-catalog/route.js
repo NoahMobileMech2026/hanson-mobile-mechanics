@@ -16,17 +16,72 @@ function menuItems(json) {
     .filter((item) => item.label && item.value);
 }
 
-async function getJson(path) {
+function decodeXml(value) {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'");
+}
+
+function xmlTag(xml, name) {
+  const match = String(xml || "").match(
+    new RegExp("<" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)<\\/" + name + ">", "i")
+  );
+  return match ? decodeXml(match[1].trim()) : "";
+}
+
+function parseXml(text) {
+  if (/<menuItems[\s>]/i.test(text)) {
+    const items = [...text.matchAll(/<menuItem(?:\s[^>]*)?>([\s\S]*?)<\/menuItem>/gi)]
+      .map((match) => ({
+        text: xmlTag(match[1], "text"),
+        value: xmlTag(match[1], "value")
+      }))
+      .filter((item) => item.text && item.value);
+
+    return { menuItems: { menuItem: items } };
+  }
+
+  if (/<vehicle[\s>]/i.test(text)) {
+    return {
+      vehicle: {
+        displ: xmlTag(text, "displ"),
+        cylinders: xmlTag(text, "cylinders"),
+        fuelType1: xmlTag(text, "fuelType1"),
+        fuelType: xmlTag(text, "fuelType"),
+        drive: xmlTag(text, "drive"),
+        trany: xmlTag(text, "trany")
+      }
+    };
+  }
+
+  throw new Error("Vehicle catalog returned an unknown format");
+}
+
+async function getData(path) {
   const response = await fetch(BASE + path, {
-    headers: { Accept: "application/json" },
-    next: { revalidate: 86400 }
+    headers: {
+      Accept: "application/json, application/xml;q=0.9, text/xml;q=0.8"
+    },
+    cache: "no-store"
   });
 
   if (!response.ok) {
     throw new Error("Vehicle catalog request failed");
   }
 
-  return response.json();
+  const text = await response.text();
+  const trimmed = text.trim();
+
+  if (!trimmed) throw new Error("Vehicle catalog returned an empty response");
+
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    return JSON.parse(trimmed);
+  }
+
+  return parseXml(trimmed);
 }
 
 function engineLabel(vehicle) {
@@ -56,17 +111,17 @@ export async function GET(request) {
 
   try {
     if (level === "years") {
-      const data = await getJson("/vehicle/menu/year");
+      const data = await getData("/vehicle/menu/year");
       return NextResponse.json({ options: menuItems(data) });
     }
 
     if (level === "makes" && year) {
-      const data = await getJson("/vehicle/menu/make?year=" + encodeURIComponent(year));
+      const data = await getData("/vehicle/menu/make?year=" + encodeURIComponent(year));
       return NextResponse.json({ options: menuItems(data) });
     }
 
     if (level === "models" && year && make) {
-      const data = await getJson(
+      const data = await getData(
         "/vehicle/menu/model?year=" + encodeURIComponent(year) +
         "&make=" + encodeURIComponent(make)
       );
@@ -74,7 +129,7 @@ export async function GET(request) {
     }
 
     if (level === "configurations" && year && make && model) {
-      const data = await getJson(
+      const data = await getData(
         "/vehicle/menu/options?year=" + encodeURIComponent(year) +
         "&make=" + encodeURIComponent(make) +
         "&model=" + encodeURIComponent(model)
@@ -89,7 +144,7 @@ export async function GET(request) {
     }
 
     if (level === "engine" && vehicleId) {
-      const data = await getJson("/vehicle/" + encodeURIComponent(vehicleId));
+      const data = await getData("/vehicle/" + encodeURIComponent(vehicleId));
       const vehicle = data?.vehicle ?? data;
       return NextResponse.json({
         options: [{

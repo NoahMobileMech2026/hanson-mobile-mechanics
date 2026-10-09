@@ -11,6 +11,7 @@ export default function JobDetailPage() {
   const { id } = useParams();
   const supabase = useMemo(() => getSupabase(), []);
   const [authorized, setAuthorized] = useState(null);
+  const [role, setRole] = useState(null);
   const [job, setJob] = useState(null);
   const [charges, setCharges] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -28,16 +29,18 @@ export default function JobDetailPage() {
     if (!user) { window.location.href = "/admin"; return; }
 
     const { data: admin } = await supabase.from("admin_users").select("role").eq("user_id", user.id).maybeSingle();
-    if (!admin) { setAuthorized(false); return; }
+    if (!admin || !["owner","team_member"].includes(admin.role)) { setAuthorized(false); return; }
+    setRole(admin.role);
     setAuthorized(true);
-    await load();
+    await load(admin.role);
   }
 
-  async function load() {
+  async function load(currentRole = role) {
+    const ownerOnly = currentRole === "owner";
     const [jobRes, chargeRes, invoiceRes, noteRes] = await Promise.all([
       supabase.from("jobs").select("*,customers(*),vehicles(*)").eq("id", id).single(),
-      supabase.from("job_charges").select("*").eq("job_id", id).order("created_at"),
-      supabase.from("invoices").select("*").eq("job_id", id).order("created_at", { ascending:false }),
+      ownerOnly ? supabase.from("job_charges").select("*").eq("job_id", id).order("created_at") : Promise.resolve({ data: [] }),
+      ownerOnly ? supabase.from("invoices").select("*").eq("job_id", id).order("created_at", { ascending:false }) : Promise.resolve({ data: [] }),
       supabase.from("job_notes").select("*").eq("job_id", id).order("created_at", { ascending:false })
     ]);
     setJob(jobRes.data);
@@ -194,23 +197,28 @@ export default function JobDetailPage() {
     <main className="admin-page">
       <header className="admin-header">
         <div>
-          <a className="admin-back-link" href="/admin">← Command Center</a>
+          <a className="admin-back-link" href={role === "owner" ? "/admin/owner" : "/admin/team"}>← Command Center</a>
           <h1>Job: {job.customers?.full_name}</h1>
           <p>{[job.vehicles?.year, job.vehicles?.make, job.vehicles?.model, job.vehicles?.trim].filter(Boolean).join(" ")}{job.vehicles?.engine ? ` • ${job.vehicles.engine}` : ""}</p>
         </div>
         <div className="admin-header-actions">
-          <button className="btn btn-secondary" onClick={toggleArchive} disabled={saving}>{job.archived_at ? "Restore Job" : "Archive Job"}</button>
-          <button className="btn btn-secondary" onClick={createEstimate} disabled={saving}>Create Estimate</button>
-          <button className="btn btn-primary" onClick={createInvoice} disabled={saving}>Create Invoice</button>
+          <span className="status-pill">{role === "owner" ? "Owner" : "Team Member"}</span>
+          {role === "owner" && <>
+            <button className="btn btn-secondary" onClick={toggleArchive} disabled={saving}>{job.archived_at ? "Restore Job" : "Archive Job"}</button>
+            <button className="btn btn-secondary" onClick={createEstimate} disabled={saving}>Create Estimate</button>
+            <button className="btn btn-primary" onClick={createInvoice} disabled={saving}>Create Invoice</button>
+          </>}
         </div>
       </header>
 
       <section className="admin-stats">
         <div className="stat-card"><span>Customer</span><strong>{job.customers?.full_name}</strong></div>
         <div className="stat-card"><span>Phone</span><strong>{job.customers?.phone}</strong></div>
-        <div className="stat-card"><span>Charges</span><strong>{money.format(quotedTotal)}</strong></div>
-        <div className="stat-card"><span>Parts Cost</span><strong>{money.format(partsCost)}</strong></div>
-        <div className="stat-card"><span>Gross Before Expenses</span><strong>{money.format(grossBeforeExpenses)}</strong></div>
+        {role === "owner" && <>
+          <div className="stat-card"><span>Charges</span><strong>{money.format(quotedTotal)}</strong></div>
+          <div className="stat-card"><span>Parts Cost</span><strong>{money.format(partsCost)}</strong></div>
+          <div className="stat-card"><span>Gross Before Expenses</span><strong>{money.format(grossBeforeExpenses)}</strong></div>
+        </>}
       </section>
 
       <section className="admin-panel">
@@ -252,6 +260,7 @@ export default function JobDetailPage() {
         </form>
       </section>
 
+      {role === "owner" && <>
       <section className="admin-panel">
         <h2>Labor, Parts & Charges</h2>
         <form className="admin-form-grid" onSubmit={addCharge}>
@@ -301,6 +310,8 @@ export default function JobDetailPage() {
           {!invoices.length && <p>No invoices yet.</p>}
         </div>
       </section>
+
+      </>}
 
       <section className="admin-panel">
         <h2>Internal Notes</h2>

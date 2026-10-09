@@ -27,7 +27,7 @@ export default function HomePage() {
       <header className="dealer-header">
         <div className="container dealer-nav">
           <a className="dealer-brand" href="#top" aria-label="Hanson's Mobile Mechanics">
-            <span className="dealer-brand-mark"><img src="/hanson-logo.jpg" alt="" aria-hidden="true" /></span>
+            <span className="dealer-brand-mark"><img src="/hanson-official-logo.svg" alt="" aria-hidden="true" /></span>
             <span>
               <strong>Hanson&apos;s Mobile Mechanics</strong>
               <small>Mobile Auto Repair</small>
@@ -64,7 +64,7 @@ export default function HomePage() {
             <div className="hero-graphic-slash hero-graphic-slash-one"></div>
             <div className="hero-graphic-slash hero-graphic-slash-two"></div>
             <div className="hero-logo-stage">
-              <img className="hero-brand-logo" src="/hanson-logo.jpg" alt="Hanson’s Mobile Mechanics logo" />
+              <img className="hero-brand-logo" src="/hanson-official-logo.svg" alt="Hanson’s Mobile Mechanics logo" />
             </div>
             <div className="hero-graphic-copy">
               <span>WE COME TO YOU</span>
@@ -182,7 +182,7 @@ export default function HomePage() {
       <footer className="dealer-footer">
         <div className="container dealer-footer-inner">
           <div className="footer-brand-group">
-            <img className="footer-brand-logo" src="/hanson-logo.jpg" alt="" aria-hidden="true" />
+            <img className="footer-brand-logo" src="/hanson-official-logo.svg" alt="" aria-hidden="true" />
             <div className="footer-brand-copy">
               <strong>Hanson&apos;s Mobile Mechanics</strong>
               <span>Webster City, Iowa</span>

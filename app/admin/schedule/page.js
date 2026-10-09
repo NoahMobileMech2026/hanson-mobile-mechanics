@@ -5,7 +5,8 @@ import { getSupabase } from "../../lib/supabaseClient";
 
 export default function SchedulePage() {
   const supabase = useMemo(() => getSupabase(), []);
-  const [authorized,setAuthorized] = useState(null);\n  const [role,setRole] = useState(null);
+  const [authorized,setAuthorized] = useState(null);
+  const [role,setRole] = useState(null);
   const [jobs,setJobs] = useState([]);
 
   useEffect(()=>{ init(); },[]);
@@ -15,7 +16,8 @@ export default function SchedulePage() {
     const user=sessionData.session?.user;
     if(!user){ window.location.href="/admin"; return; }
     const { data: admin }=await supabase.from("admin_users").select("role").eq("user_id",user.id).maybeSingle();
-    if(!admin){ setAuthorized(false); return; }
+    if(!admin || !["owner","team_member"].includes(admin.role)){ setAuthorized(false); return; }
+    setRole(admin.role);
     setAuthorized(true);
     const { data }=await supabase.from("jobs").select("id,status,scheduled_for,service_location,customers(full_name,phone),vehicles(year,make,model,trim,engine)").is("archived_at", null).not("scheduled_for","is",null).order("scheduled_for");
     setJobs(data??[]);

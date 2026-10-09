@@ -222,6 +222,7 @@ export default function AdminPage() {
           <h1>Business Command Center</h1>
         </div>
         <div className="admin-header-actions">
+          <a className="btn btn-primary" href="/admin/call-intake">New Call Intake</a>
           <a className="btn btn-secondary" href="/">View Website</a>
           <button className="btn btn-primary" onClick={signOut}>Sign Out</button>
         </div>
@@ -237,6 +238,7 @@ export default function AdminPage() {
       </section>
 
       <nav className="admin-section-nav">
+        <a href="/admin/call-intake">Call Intake</a>
         <a href="#requests">Requests</a>
         <a href="#jobs">Jobs</a>
         <a href="#archive">Archive</a>
